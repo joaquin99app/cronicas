@@ -111,17 +111,18 @@ def main(page: ft.Page):
             mensajes.append({"role": "user" if msg["rol"] == "usuario" else "assistant", "content": msg["texto"]})
 
         completion = client.chat.completions.create(model="llama-3.3-70b-versatile", messages=mensajes)
-        res = completion.choices.message.content
+        # CORRECCIÓN EN EL ÍNDICE DE GROQ PARA DETENER EL ERROR DE LISTA:
+        res = completion.choices[0].message.content
 
         if "[MEMORIA:" in res:
             p_lore = res.split("[MEMORIA:")
-            res = p_lore
-            lore_partida_contenedor = [p_lore.replace("]", "").replace('"', '').strip()]
+            res = p_lore[0]
+            lore_partida_contenedor = [p_lore[1].replace("]", "").replace('"', '').strip()]
 
         if "[CAMBIOS:" in res:
             p_cambios = res.split("[CAMBIOS:")
-            cambios_str = p_cambios.replace("]", "").strip()
-            res = p_cambios
+            cambios_str = p_cambios[1].replace("]", "").strip()
+            res = p_cambios[0]
             if "Ninguno" not in cambios_str:
                 for cambio in cambios_str.split(","):
                     try:
