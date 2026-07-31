@@ -27,7 +27,7 @@ def main(page: ft.Page):
         "El Reloj de Arena Ancestral que mantiene la barrera de invisibilidad frente a los humanos mundanos ha sido agrietado en un sabotaje interno.",
         "Un antiguo linaje de vampiros puros está comprando los nexos de sangre de las alcantarillas para desatar una plaga mística purificadora."
     ]
-    semilla_actual = [random.choice(semillas_amenaza_final)]
+    semilla_actual = random.choice(semillas_amenaza_final)
     lore_partida_contenedor = [f"Amenaza de extinción oculta elegida: {semilla_actual}"]
 
     # OBTENER LA HORA REAL DE LA PARTIDA (Ciclo 24 horas reales)
@@ -70,6 +70,7 @@ def main(page: ft.Page):
 
     # 6. Lógica de ejecución de la IA al pulsar el botón
     def enviar_accion(e):
+        nonlocal lore_partida_contenedor
         if not input_texto.value: return
         txt = input_texto.value
         mod = modo_radio.value
@@ -140,6 +141,7 @@ def main(page: ft.Page):
         page.update()
 
     def reiniciar(e):
+        nonlocal lore_partida_contenedor
         stats["Vida"] = 100
         stats["Dinero"] = 50
         stats["Mana"] = 30
