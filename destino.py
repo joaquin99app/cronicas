@@ -16,7 +16,8 @@ def main(page: ft.Page):
     # 2. Variables de estado directas de la partida
     stats = {"Vida": 100, "Dinero": 50, "Mana": 30, "EXP": 0, "Dias": 30}
     historial = []
-    lore_partida = ["Pendiente de generación inicial"]
+    # Metemos el lore en una lista para evitar el error de 'cannot access local variable'
+    lore_partida_contenedor = ["Pendiente de generación inicial"]
 
     # 3. Componentes visuales superiores
     reloj_label = ft.Text(f"⏳ RELOJ DEL APOCALIPSIS MÁGICO: Quedan {stats['Dias']} días", color="#EF4444", weight=ft.FontWeight.BOLD, size=14)
@@ -72,7 +73,7 @@ def main(page: ft.Page):
         Eres el Game Master de un RPG conversacional de terror místico y magia urbana oculta. Tu estilo debe ser denso, literario, perturbador y profundamente detallado. Escribe respuestas largas.
         Todo el lore debe girar en torno al MUNDO MÁGICO OCULTO. Hay peligros acechando constantemente. Genera eventos imprevistos que el jugador puede abordar o ignorar libremente. Todo lo que hace tiene consecuencias futuras.
         El mundo PUEDE SER SALVADO de los {stats['Dias']} días restantes si el jugador hace cosas extraordinariamente complejas, pero nunca se lo expliques.
-        Mitología actual de esta sesión: {lore_partida}. Si es el inicio, INVENTA una mitología única de degradación.
+        Mitología actual de esta sesión: {lore_partida_contenedor[0]}. Si es el inicio, INVENTA una mitología única de degradación.
         Datos actuales del jugador: Vida={stats['Vida']}, Dinero={stats['Dinero']}, Mana={stats['Mana']}. Días restantes: {stats['Dias']}.
         Modo actual: '{mod}'. Reacciona diferente si piensa o habla en voz alta.
         AL FINAL ABSOLUTO de tu mensaje, incluye estrictamente estos dos bloques en este formato exacto:
@@ -86,17 +87,17 @@ def main(page: ft.Page):
 
         res = client.chat.completions.create(model="llama-3.3-70b-versatile", messages=mensajes).choices.message.content
 
-        # Procesar memoria oculta de la partida
+        # Procesar memoria oculta de la partida de forma segura dentro de la lista
         if "[MEMORIA:" in res:
             p_lore = res.split("[MEMORIA:")
-            res = p_lore
-            lore_partida = p_lore.replace("]", "").replace('"', '').strip()
+            res = p_lore[0]
+            lore_partida_contenedor[0] = p_lore[1].replace("]", "").replace('"', '').strip()
 
         # Procesar cambios automáticos en los marcadores
         if "[CAMBIOS:" in res:
             p_cambios = res.split("[CAMBIOS:")
-            res = p_cambios
-            cambios_str = p_cambios.replace("]", "").strip()
+            res = p_cambios[0]
+            cambios_str = p_cambios[1].replace("]", "").strip()
             if "Ninguno" not in cambios_str:
                 for cambio in cambios_str.split(","):
                     try:
@@ -104,7 +105,7 @@ def main(page: ft.Page):
                         k = clave.strip()
                         v = int(valor.strip())
                         if k == "Dias": stats["Dias"] += v
-                        else: stats[k] += v
+                        else: stats[k] = stats.get(k, 100) + v
                     except: pass
 
         # Mostrar respuesta del Narrador y actualizar la pantalla
@@ -118,7 +119,7 @@ def main(page: ft.Page):
     def reiniciar(e):
         page.window_reload()
 
-    # CORRECCIÓN DE BOTONES: Usamos 'content' con ft.Text para evitar el error de inicialización
+    # Botones estilizados con compatibilidad total
     btn_enviar = ft.ElevatedButton(
         content=ft.Text("🚀 ALTERAR EL DESTINO", color="white", weight=ft.FontWeight.BOLD),
         bgcolor="#6D28D9", 
