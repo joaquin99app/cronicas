@@ -18,7 +18,7 @@ def main(page: ft.Page):
     historial = []
     lore_partida = ["Pendiente de generación inicial"]
 
-    # 3. Componentes visuales superiores (Sin referencias complejas a bordes)
+    # 3. Componentes visuales superiores
     reloj_label = ft.Text(f"⏳ RELOJ DEL APOCALIPSIS MÁGICO: Quedan {stats['Dias']} días", color="#EF4444", weight=ft.FontWeight.BOLD, size=14)
     stats_text = ft.Text(f"❤️ {stats['Vida']}%  |  💰 {stats['Dinero']}€  |  🔮 {stats['Mana']}/30  |  ✨ {stats['EXP']}%", color="#F3F4F6", weight=ft.FontWeight.BOLD, size=15)
     
@@ -84,19 +84,19 @@ def main(page: ft.Page):
         for msg in historial[-6:]: 
             mensajes.append({"role": "user" if msg["rol"] == "usuario" else "assistant", "content": msg["texto"]})
 
-        res = client.chat.completions.create(model="llama-3.3-70b-versatile", messages=mensajes).choices[0].message.content
+        res = client.chat.completions.create(model="llama-3.3-70b-versatile", messages=mensajes).choices.message.content
 
         # Procesar memoria oculta de la partida
         if "[MEMORIA:" in res:
             p_lore = res.split("[MEMORIA:")
-            res = p_lore[0]
-            lore_partida = p_lore[1].replace("]", "").replace('"', '').strip()
+            res = p_lore
+            lore_partida = p_lore.replace("]", "").replace('"', '').strip()
 
         # Procesar cambios automáticos en los marcadores
         if "[CAMBIOS:" in res:
             p_cambios = res.split("[CAMBIOS:")
-            res = p_cambios[0]
-            cambios_str = p_cambios[1].replace("]", "").strip()
+            res = p_cambios
+            cambios_str = p_cambios.replace("]", "").strip()
             if "Ninguno" not in cambios_str:
                 for cambio in cambios_str.split(","):
                     try:
@@ -118,10 +118,33 @@ def main(page: ft.Page):
     def reiniciar(e):
         page.window_reload()
 
-    btn_enviar = ft.ElevatedButton(text="🚀 ALTERAR EL DESTINO", bgcolor="#6D28D9", color="white", on_click=enviar_accion, height=50)
-    btn_reset = ft.TextButton(text="💀 Reiniciar", icon=ft.icons.DELETE_FOREVER, icon_color="#EF4444", on_click=reiniciar)
+    # CORRECCIÓN DE BOTONES: Usamos 'content' con ft.Text para evitar el error de inicialización
+    btn_enviar = ft.ElevatedButton(
+        content=ft.Text("🚀 ALTERAR EL DESTINO", color="white", weight=ft.FontWeight.BOLD),
+        bgcolor="#6D28D9", 
+        on_click=enviar_accion, 
+        height=50
+    )
+    
+    btn_reset = ft.TextButton(
+        content=ft.Text("💀 Reiniciar", color="#EF4444"), 
+        on_click=reiniciar
+    )
 
     # 7. Construcción visual de la pantalla
-    page.add(ft.Column([ft.Row([ft.Text("🧙‍♂️ CRÓNICAS DEL COLAPSO", size=18, weight=ft.FontWeight.BOLD, color="#9333EA"), btn_reset], alignment=ft.MainAxisAlignment.SPACE_BETWEEN), stat_container, ft.Divider(color="#1E293B"), chat_view, ft.Divider(color="#1E293B"), modo_radio, ft.Row([input_texto, btn_enviar])], expand=True))
+    page.add(
+        ft.Column([
+            ft.Row([
+                ft.Text("🧙‍♂️ CRÓNICAS DEL COLAPSO", size=18, weight=ft.FontWeight.BOLD, color="#9333EA"), 
+                btn_reset
+            ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN), 
+            stat_container, 
+            ft.Divider(color="#1E293B"), 
+            chat_view, 
+            ft.Divider(color="#1E293B"), 
+            modo_radio, 
+            ft.Row([input_texto, btn_enviar])
+        ], expand=True)
+    )
 
 ft.app(target=main, view=ft.AppView.WEB_BROWSER, port=8000)
