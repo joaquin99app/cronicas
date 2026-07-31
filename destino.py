@@ -168,5 +168,6 @@ def main(page: ft.Page):
 
 # Lanzar en formato Web adaptado a pantallas móviles automáticamente
 # Forzar la ruta raíz para servidores de internet
-ft.app(target=main, view=ft.AppView.WEB_BROWSER, port=8000, main_path="/")
+ft.app(target=main, view=ft.AppView.WEB_BROWSER, port=8000)
+
 
