@@ -18,10 +18,16 @@ def main(page: ft.Page):
     historial = []
     lore_partida = ["Pendiente de generación inicial"]
 
-    # 3. Componentes visuales superiores
+    # 3. Componentes visuales superiores (Sin referencias complejas a bordes)
     reloj_label = ft.Text(f"⏳ RELOJ DEL APOCALIPSIS MÁGICO: Quedan {stats['Dias']} días", color="#EF4444", weight=ft.FontWeight.BOLD, size=14)
     stats_text = ft.Text(f"❤️ {stats['Vida']}%  |  💰 {stats['Dinero']}€  |  🔮 {stats['Mana']}/30  |  ✨ {stats['EXP']}%", color="#F3F4F6", weight=ft.FontWeight.BOLD, size=15)
-    stat_container = ft.Container(content=ft.Column([reloj_label, stats_text], alignment=ft.MainAxisAlignment.CENTER, horizontal_alignment=ft.CrossAxisAlignment.CENTER), padding=15, border_radius=12, gradient=ft.LinearGradient(colors=["#0F172A", "#1E1B4B"]), border=ft.border.all(1, "#4C1D95"))
+    
+    stat_container = ft.Container(
+        content=ft.Column([reloj_label, stats_text], alignment=ft.MainAxisAlignment.CENTER, horizontal_alignment=ft.CrossAxisAlignment.CENTER), 
+        padding=15, 
+        border_radius=12, 
+        gradient=ft.LinearGradient(colors=["#0F172A", "#1E1B4B"])
+    )
 
     # 4. Historial del Chat Principal
     chat_view = ft.ListView(expand=True, spacing=10, height=380)
@@ -29,10 +35,19 @@ def main(page: ft.Page):
     def cargar_bloque(rol, modo, texto):
         if rol == "usuario":
             bg = "#0F172A" if modo == "Pensar" else "#022C22"
-            col = "#38BDF8" if modo == "Pensar" else "#10B981"
             lbl = "💭 Pensasíntesis: " if modo == "Pensar" else "🗣️ Voz Alta: "
-            return ft.Container(content=ft.Text(f"{lbl}{texto}", color="#94A3B8" if modo == "Pensar" else "#34D399", italic=(modo=="Pensar")), padding=14, border_radius=10, bgcolor=bg, border=ft.border.only(left=ft.BorderSide(5, col)))
-        return ft.Container(content=ft.Text(f"🔮 Narrador: {texto}", color="#F3F4F6", font_family="Georgia"), padding=14, border_radius=10, bgcolor="#111827", border=ft.border.only(left=ft.BorderSide(5, "#8B5CF6")))
+            return ft.Container(
+                content=ft.Text(f"{lbl}{texto}", color="#94A3B8" if modo == "Pensar" else "#34D399", italic=(modo=="Pensar")), 
+                padding=14, 
+                border_radius=10, 
+                bgcolor=bg
+            )
+        return ft.Container(
+            content=ft.Text(f"🔮 Narrador: {texto}", color="#F3F4F6", font_family="Georgia"), 
+            padding=14, 
+            border_radius=10, 
+            bgcolor="#111827"
+        )
 
     # Mensaje de bienvenida inicial
     chat_view.controls.append(cargar_bloque("ia", "Pensar", "El tejido de la realidad emite un zumbido agónico. La magia se pudre en el subsuelo de la ciudad y el velo místico está a punto de desgarrarse de forma irreversible. Quedan 30 días exactos para el desmoronamiento absoluto de la trama existencial.\n\nPeligros invisibles acechan en cada esquina. Tus actos ecoarán en el futuro. Existe una remota posibilidad de revertir la degradación y salvar el mundo, pero los métodos permanecen ocultos en el misterio absoluto.\n\nManifiesta tu presencia escogiendo tu arquetipo maldito escribiéndolo abajo: Mago Urbano, Detective, Cazador o Humano Despierto."))
@@ -57,7 +72,7 @@ def main(page: ft.Page):
         Eres el Game Master de un RPG conversacional de terror místico y magia urbana oculta. Tu estilo debe ser denso, literario, perturbador y profundamente detallado. Escribe respuestas largas.
         Todo el lore debe girar en torno al MUNDO MÁGICO OCULTO. Hay peligros acechando constantemente. Genera eventos imprevistos que el jugador puede abordar o ignorar libremente. Todo lo que hace tiene consecuencias futuras.
         El mundo PUEDE SER SALVADO de los {stats['Dias']} días restantes si el jugador hace cosas extraordinariamente complejas, pero nunca se lo expliques.
-        Mitología actual de esta sesión: {lore_partida[0]}. Si es el inicio, INVENTA una mitología única de degradación.
+        Mitología actual de esta sesión: {lore_partida}. Si es el inicio, INVENTA una mitología única de degradación.
         Datos actuales del jugador: Vida={stats['Vida']}, Dinero={stats['Dinero']}, Mana={stats['Mana']}. Días restantes: {stats['Dias']}.
         Modo actual: '{mod}'. Reacciona diferente si piensa o habla en voz alta.
         AL FINAL ABSOLUTO de tu mensaje, incluye estrictamente estos dos bloques en este formato exacto:
@@ -75,7 +90,7 @@ def main(page: ft.Page):
         if "[MEMORIA:" in res:
             p_lore = res.split("[MEMORIA:")
             res = p_lore[0]
-            lore_partida[0] = p_lore[1].replace("]", "").replace('"', '').strip()
+            lore_partida = p_lore[1].replace("]", "").replace('"', '').strip()
 
         # Procesar cambios automáticos en los marcadores
         if "[CAMBIOS:" in res:
