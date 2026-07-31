@@ -16,7 +16,6 @@ def main(page: ft.Page):
     # 2. Variables de estado directas de la partida
     stats = {"Vida": 100, "Dinero": 50, "Mana": 30, "EXP": 0, "Dias": 30}
     historial = []
-    # Metemos el lore en una lista para evitar el error de 'cannot access local variable'
     lore_partida_contenedor = ["Pendiente de generación inicial"]
 
     # 3. Componentes visuales superiores
@@ -85,7 +84,9 @@ def main(page: ft.Page):
         for msg in historial[-6:]: 
             mensajes.append({"role": "user" if msg["rol"] == "usuario" else "assistant", "content": msg["texto"]})
 
-        res = client.chat.completions.create(model="llama-3.3-70b-versatile", messages=mensajes).choices.message.content
+        # SOLUCIÓN AL ERROR DE LISTA: Extraemos el contenido con el índice [0] obligatorio
+        completion = client.chat.completions.create(model="llama-3.3-70b-versatile", messages=mensajes)
+        res = completion.choices[0].message.content
 
         # Procesar memoria oculta de la partida de forma segura dentro de la lista
         if "[MEMORIA:" in res:
@@ -96,8 +97,8 @@ def main(page: ft.Page):
         # Procesar cambios automáticos en los marcadores
         if "[CAMBIOS:" in res:
             p_cambios = res.split("[CAMBIOS:")
-            res = p_cambios[0]
             cambios_str = p_cambios[1].replace("]", "").strip()
+            res = p_cambios[0]
             if "Ninguno" not in cambios_str:
                 for cambio in cambios_str.split(","):
                     try:
