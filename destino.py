@@ -26,7 +26,7 @@ def main(page: ft.Page):
 
     # Catálogo de amenazas límite para los 30 días reales
     semillas_amenaza_final = [
-        "El motor de transmutación del Ministerio de Magia ha sido infectado por una maldición de óxido eterno que disuelve el maná de la ciudad.",
+        "El motor de transmutación del Ministerio de Magia ha sido infected por una maldición de óxido eterno que disuelve el maná de la ciudad.",
         "Una secta de licántropos y magos oscuros está preparando el despertar de un dragón mitológico sepultado bajo los cimientos urbanos.",
         "Un brote de 'estática mística' se está filtrando a través de la red eléctrica, borrando los recuerdos de los hechiceros y exponiendo el velo.",
         "El Reloj de Arena Ancestral que mantiene la barrera de invisibilidad frente a los humanos mundanos ha sido agrietado en un sabotaje interno.",
@@ -112,7 +112,7 @@ def main(page: ft.Page):
         - Si el jugador compra un objeto, ponle un precio lógico detallado en el diálogo (ej: una Poción de Maná cuesta 15€, una Varita Rúnica nueva cuesta 45€).
         
         [RITMO DE APOCALIPSIS VARIABLE]
-        La gran amenaza final que destruirá el Velo a los 30 días es: '{lore_partida_contenedor}'. Decide libremente si destapar este peligro ahora o mantener la calma mística ordinaria dejando caer rumores discretos en las tiendas o tabernas.
+        La gran amenaza final que destruirá el Velo a los 30 días es: '{lore_partida_contenedor}'. Decide si revelar este peligro inmediatamente o no según la situación.
         
         [MUNDO ABIERTO Y CICLO HORARIO]
         La hora real es exactamente las {hora_envio}. Si es de noche ({es_noche_envio}), los mercados negros abren y las criaturas de los callejones son letales. Si el jugador ignora una tienda o rechaza una misión, acéptalo de inmediato y narra cómo el mundo sigue girando sin él.
@@ -131,24 +131,23 @@ def main(page: ft.Page):
             mensajes.append({"role": "user" if msg["rol"] == "usuario" else "assistant", "content": msg["texto"]})
 
         completion = client.chat.completions.create(model="llama-3.3-70b-versatile", messages=mensajes)
-        res = completion.choices[0].message.content
+        res = completion.choices.message.content
 
         if "[MEMORIA:" in res:
             p_lore = res.split("[MEMORIA:")
-            res = p_lore[0]
-            lore_partida_contenedor = [p_lore[1].replace("]", "").replace('"', '').strip()]
+            res = p_lore
+            lore_partida_contenedor = [p_lore.replace("]", "").replace('"', '').strip()]
 
         # PROCESADOR SEGURO DE ASIGNACIÓN FIJA DE MARCADORES ECONOMÍA
         if "[ESTADÍSTICAS:" in res:
             p_cambios = res.split("[ESTADÍSTICAS:")
-            cambios_str = p_cambios[1].replace("]", "").strip()
-            res = p_cambios[0]
+            cambios_str = p_cambios.replace("]", "").strip()
+            res = p_cambios
             for cambio in cambios_str.split(","):
                 try:
                     clave, valor = cambio.split("=")
                     k = clave.strip()
                     v = int(valor.strip())
-                    # Limitadores lógicos para evitar desbordamientos
                     if k in stats:
                         if k == "Vida" and v > 100: v = 100
                         if k == "Mana" and v > 30: v = 30
@@ -166,7 +165,8 @@ def main(page: ft.Page):
         historial.append({"rol": "ia", "texto": res})
         
         reloj_label.value = f"⏳ RELOJ DE LA CRISIS: Quedan {stats['Dias']} días para el fin del Velo"
-        hora_label.value = f"⏰ Tiempo Real: {datetime.now().strftime('%H('%M')} | {'🌌 TOQUE DE QUEDA' if (20 <= datetime.now().hour or datetime.now().hour <= 6) else '☀️ BAJO EL VELO'}"
+        # CORRECCIÓN DE LA COMILLA HORARIA EN ESTA LÍNEA:
+        hora_label.value = f"⏰ Tiempo Real: {datetime.now().strftime('%H:%M')} | {'🌌 TOQUE DE QUEDA' if (20 <= datetime.now().hour or datetime.now().hour <= 6) else '☀️ BAJO EL VELO'}"
         stats_text.value = f"❤️ {stats['Vida']}%  |  💰 {stats['Dinero']}€  |  🔮 {stats['Mana']}/30  |  ✨ {stats['EXP']}%"
         page.update()
 
