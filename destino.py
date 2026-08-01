@@ -16,21 +16,21 @@ def main(page: ft.Page):
     # Conexión segura con la IA de Groq en Render
     client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
 
-    # 2. SISTEMA DE GUARDADO INTEGRADO EN LA MEMORIA VIRTUAL DEL SERVIDOR
-    # Usamos las propiedades nativas de la sesión de la página de Flet
-    if "stats" not in page.session:
+    # Semillas de amenazas que significan el fin de la comunidad mágica a los 30 días
+    semillas_amenaza_final = [
+        "El motor de transmutación del Ministerio de Magia ha sido infectado por una maldición de óxido eterno que disuelve el maná de la ciudad.",
+        "Una secta de licántropos y magos oscuros está preparando el despertar de un dragón mitológico sepultado bajo los cimientos urbanos.",
+        "Un brote de 'estática mística' se está filtrando a través de la red eléctrica, borrando los recuerdos de los hechiceros y exponiendo el velo.",
+        "El Reloj de Arena Ancestral que mantiene la barrera de invisibilidad frente a los humanos mundanos ha sido agrietado en un sabotaje interno.",
+        "Un antiguo linaje de vampiros puros está comprando los nexos de sangre de las alcantarillas para desatar una plaga mística purificadora."
+    ]
+
+    # 2. SISTEMA DE GUARDADO INTEGRADO (Formato oficial corregido para Flet)
+    if not page.session.contains("stats"):
         page.session.set("stats", {"Vida": 100, "Dinero": 50, "Mana": 30, "EXP": 0, "Dias": 30})
-    if "historial" not in page.session:
+    if not page.session.contains("historial"):
         page.session.set("historial", [])
-    if "lore_partida" not in page.session:
-        # Semillas de amenazas que significan el fin de la comunidad mágica a los 30 días
-        semillas_amenaza_final = [
-            "El motor de transmutación del Ministerio de Magia ha sido infectado por una maldición de óxido eterno que disuelve el maná de la ciudad.",
-            "Una secta de licántropos y magos oscuros está preparando el despertar de un dragón mitológico sepultado bajo los cimientos urbanos.",
-            "Un brote de 'estática mística' se está filtrando a través de la red eléctrica, borrando los recuerdos de los hechiceros y exponiendo el velo.",
-            "El Reloj de Arena Ancestral que mantiene la barrera de invisibilidad frente a los humanos mundanos ha sido agrietado en un sabotaje interno.",
-            "Un antiguo linaje de vampiros puros está comprando los nexos de sangre de las alcantarillas para desatar una plaga mística purificadora."
-        ]
+    if not page.session.contains("lore_partida"):
         semilla_actual = random.choice(semillas_amenaza_final)
         page.session.set("lore_partida", [f"Amenaza de extinción oculta elegida: {semilla_actual}"])
 
@@ -71,7 +71,7 @@ def main(page: ft.Page):
 
     # Reconstruir el chat desde el almacenamiento si ya hay mensajes guardados
     if not historial:
-        chat_view.controls.append(cargar_bloque("ia", "Pensar", f"Detrás del ruidoso tráfico humano y los carteles de neón de la ciudad moderna, late un world oculto regido por la magia antigua, los estatutos del Velo Secreto y los decretos del Ministerio de Hechicería. Quedan 30 días reales de estabilidad existencial antes de que un desastre irreversible arrastre este mundo al olvido.\n\n[ENTORNO REAL DEL VELO]\nHora actual del dispositivo: {hora_actual_real}.\nEstado del entorno: {estado_dia_noche}.\n\nEste es un mundo abierto repleto de misterios, reliquias, tabernas mágicas escondidas y peligros. Si rechazas un camino, la historia avanzará por su cuenta sin esperarte. Elige tu arquetipo maldito: Mago Urbano, Detective, Cazador o Humano Despierto."))
+        chat_view.controls.append(cargar_bloque("ia", "Pensar", f"Detrás del ruidoso tráfico humano y los carteles de neón de la ciudad moderna, late un mundo oculto regido por la magia antigua, los estatutos del Velo Secreto y los decretos del Ministerio de Hechicería. Quedan 30 días reales de estabilidad existencial antes de que un desastre irreversible arrastre este mundo al olvido.\n\n[ENTORNO REAL DEL VELO]\nHora actual del dispositivo: {hora_actual_real}.\nEstado del entorno: {estado_dia_noche}.\n\nEste es un mundo abierto repleto de misterios, reliquias, tabernas mágicas escondidas y peligros. Si rechazas un camino, la historia avanzará por su cuenta sin esperarte. Elige tu arquetipo maldito: Mago Urbano, Detective, Cazador o Humano Despierto."))
     else:
         for msg in historial:
             chat_view.controls.append(cargar_bloque(msg["rol"], msg.get("modo", "Pensar"), msg["texto"]))
@@ -82,7 +82,6 @@ def main(page: ft.Page):
 
     # 6. Lógica de ejecución de la IA al pulsar el botón
     def enviar_accion(e):
-        nonlocal lore_partida_contenedor
         if not input_texto.value: return
         txt = input_texto.value
         mod = modo_radio.value
@@ -125,7 +124,7 @@ def main(page: ft.Page):
         if "[MEMORIA:" in res:
             p_lore = res.split("[MEMORIA:")
             res = p_lore
-            lore_partida_contenedor = [p_lore.replace("]", "").replace('"', '').strip()]
+            lore_partida_contenedor[0] = p_lore.replace("]", "").replace('"', '').strip()
             page.session.set("lore_partida", lore_partida_contenedor)
 
         if "[CAMBIOS:" in res:
@@ -153,7 +152,6 @@ def main(page: ft.Page):
         page.update()
 
     def reiniciar(e):
-        nonlocal lore_partida_contenedor
         page.session.clear()
         page.window_reload()
 
