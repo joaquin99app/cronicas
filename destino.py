@@ -51,12 +51,12 @@ def main(page: ft.Page):
     # Conexión segura con la IA de Groq en Render
     client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
 
-    # GENERAR O RECUPERAR IDENTIFICADOR DE TELÉFONO INDIVIDUAL SEGURO
-    if not page.session.get("uid_movil"):
-        nuevo_id = str(random.randint(10, 99)) # Asigna un canal numérico único en la DB externa
-        page.session.set("uid_movil", nuevo_id)
+    # GENERAR O RECUPERAR IDENTIFICADOR CORREGIDO MEDIANTE DICIONARIO DE FLET
+    if "uid_movil" not in page.session:
+        nuevo_id = str(random.randint(10, 99))  # Asigna un canal numérico único en la DB externa
+        page.session["uid_movil"] = nuevo_id
     
-    id_movil = page.session.get("uid_movil")
+    id_movil = page.session["uid_movil"]
 
     # Catálogo de amenazas límite para los 30 días reales
     semillas_amenaza_final = [
@@ -120,7 +120,7 @@ def main(page: ft.Page):
     else:
         for msg in historial:
             chat_view.controls.append(cargar_bloque(msg["rol"], msg.get("modo", "Pensar"), msg["texto"]))
-                # 5. Controles inferiores
+    # 5. Controles inferiores
     modo_radio = ft.RadioGroup(content=ft.Row([ft.Radio(value="Pensar", label="Narrar/Pensar"), ft.Radio(value="Hablar", label="Hablar")], alignment=ft.MainAxisAlignment.CENTER))
     modo_radio.value = "Pensar"
     input_texto = ft.TextField(hint_text="¿Qué dirección toma tu voluntad?", bgcolor="#111827", border_color="#1E293B", expand=True)
