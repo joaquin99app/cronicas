@@ -5,10 +5,9 @@ import random
 from datetime import datetime
 import json
 
-# NOMBRE DEL ARCHIVO DE BASE DE DATOS LOCAL EN EL SERVIDOR
+# ARCHIVO DE COPIA DE SEGURIDAD INDESTRUCTIBLE EN EL SERVIDOR
 ARCHIVO_DB = "partida_guardada.json"
 
-# Función blindada para cargar datos de la base de datos de texto
 def cargar_datos_seguros():
     if os.path.exists(ARCHIVO_DB):
         try:
@@ -22,11 +21,10 @@ def cargar_datos_seguros():
         "lore_partida": ""
     }
 
-# Función blindada para guardar datos en la base de datos de texto
 def guardar_datos_seguros(stats, historial, lore):
     try:
         with open(ARCHIVO_DB, "w", encoding="utf-8") as f:
-            json.dump({"stats": stats, "historial": historial, "lore_partida": lore}, f, ensure_all_ascii=False, indent=4)
+            json.dump({"stats": stats, "historial": historial, "lore_partida": lore}, f, ensure_ascii=False, indent=4)
     except:
         pass
 
@@ -44,18 +42,17 @@ def main(page: ft.Page):
     # Catálogo de amenazas límite para los 30 días reales
     semillas_amenaza_final = [
         "El motor de transmutación del Ministerio de Magia ha sido infectado por una maldición de óxido eterno que disuelve el maná de la ciudad.",
-        "Una secta de licántropos y magos oscuros está preparando el despertar de un dragon mitológico sepultado bajo los cimientos urbanos.",
+        "Una secta de licántropos y magos oscuros está preparando el despertar de un dragón mitológico sepultado bajo los cimientos urbanos.",
         "Un brote de 'estática mística' se está filtrando a través de la red eléctrica, borrando los recuerdos de los hechiceros y exponiendo el velo.",
         "El Reloj de Arena Ancestral que mantiene la barrera de invisibilidad frente a los humanos mundanos ha sido agrietado en un sabotaje interno.",
         "Un antiguo linaje de vampiros puros está comprando los nexos de sangre de las alcantarillas para desatar una plaga mística purificadora."
     ]
 
-    # CARGA SEgURA DE DATOS DESDE EL ARCHIVO INDESTRUCTIBLE DE PYTHON
+    # CARGA SEGURA DE DATOS DESDE EL ARCHIVO INDESTRUCTIBLE DE PYTHON
     datos_partida = cargar_datos_seguros()
     stats = datos_partida["stats"]
     historial = datos_partida["historial"]
     
-    # Inicializar el contenedor de lore si el archivo está en blanco
     if not datos_partida["lore_partida"]:
         semilla_inicial = random.choice(semillas_amenaza_final)
         lore_partida_contenedor = [f"Amenaza de extinción oculta elegida: {semilla_inicial}"]
@@ -94,9 +91,9 @@ def main(page: ft.Page):
             padding=14, border_radius=10, bgcolor="#111827"
         )
 
-    # Reconstruir el chat desde la base de datos física de Python
+    # Reconstruir todo el chat histórico guardado
     if not historial:
-        chat_view.controls.append(cargar_bloque("ia", "Pensar", f"Detrás del ruidoso tráfico humano y los carteles de neón de la ciudad moderna, late un mundo oculto regido por la magia antigua, los estatutos del Velo Secreto y los decretos del Ministerio de Hechicería. Quedan 30 días reales antes de que la crisis actual rompa el equilibrio.\n\n[SITUACIÓN ECONÓMICA Y ENTORNO]\nHora actual: {hora_actual_real} ({estado_dia_noche}).\nTienes {stats['Dinero']}€ mágicos en tu monedero. Los callejones invisibles albergan mercados negros, armerías de varitas, boticarios de maná y tabernas oscuras llenas de secretos. Todo tiene un precio, y nadie regala nada.\n\nElige tu arquetipo místico escribiéndolo abajo para adentrarte en el mapa abierto: Mago Urbano, Detective, Cazador o Humano Despierto."))
+        chat_view.controls.append(cargar_bloque("ia", "Pensar", f"Detrás del ruidoso tráfico humano y los carteles de neón de la ciudad moderna, late un mundo oculto regido por la magia antigua, los estatutos del Velo Secreto y los decretos del Ministerio de Hechicería. Quedan 30 días reales antes de que la crisis actual rompa el equilibrio.\n\n[SITUACIÓN ECONÓMICA Y ENTORNO]\nHora actual: {hora_actual_real} ({estado_dia_noche}).\nTienes {stats['Dinero']}€ mágicos en tu monedero de cuero. Los callejones invisibles albergan mercados negros, armerías de varitas, boticarios de maná y tabernas oscuras llenas de secretos. Todo tiene un precio, y nadie regala nada.\n\nElige tu arquetipo místico escribiéndolo abajo para adentrarte en el mapa abierto: Mago Urbano, Detective, Cazador o Humano Despierto."))
     else:
         for msg in historial:
             chat_view.controls.append(cargar_bloque(msg["rol"], msg.get("modo", "Pensar"), msg["texto"]))
@@ -148,22 +145,24 @@ def main(page: ft.Page):
             mensajes.append({"role": "user" if msg["rol"] == "usuario" else "assistant", "content": msg["texto"]})
 
         completion = client.chat.completions.create(model="llama-3.3-70b-versatile", messages=mensajes)
-        raw_res = str(completion.choices.message.content)
+        
+        # EXTRACCIÓN PERMANENTE CORREGIDA MEDIANTE ÍNDICE DE LISTA SEGURO:
+        raw_res = str(completion.choices[0].message.content)
 
         res_narrador = raw_res
         
         if "[MEMORIA:" in raw_res:
             partes_lore = raw_res.split("[MEMORIA:")
-            res_narrador = partes_lore
-            contenido_lore = partes_lore.replace("]", "").replace('"', '').strip()
+            res_narrador = partes_lore[0]
+            contenido_lore = partes_lore[1].replace("]", "").replace('"', '').strip()
             lore_partida_contenedor = [contenido_lore]
 
         if "[ESTADÍSTICAS:" in raw_res:
             partes_cambios = raw_res.split("[ESTADÍSTICAS:")
-            if "[MEMORIA:" not in partes_cambios:
-                res_narrador = partes_cambios
+            if "[MEMORIA:" not in partes_cambios[0]:
+                res_narrador = partes_cambios[0]
             
-            cambios_str = partes_cambios.split("]").strip()
+            cambios_str = partes_cambios[1].split("]")[0].strip()
             for cambio in cambios_str.split(","):
                 try:
                     clave, valor = cambio.split("=")
@@ -175,11 +174,11 @@ def main(page: ft.Page):
                         stats[k] = v
                 except: pass
 
-        # Mostrar respuesta del Narrador y actualizar la pantalla
+        # Añadir al panel del móvil
         chat_view.controls.append(cargar_bloque("ia", "Pensar", res_narrador.strip()))
         historial.append({"rol": "ia", "texto": res_narrador.strip()})
         
-        # --- EN CADA TURNO GUARDAMOS DE FORMA SEGURA EN EL ARCHIVO INDESTRUCTIBLE ---
+        # EN CADA MENSAJE GUARDAMOS EN EL ARCHIVO COMPATIBLE DE PYTHON
         guardar_datos_seguros(stats, historial, lore_partida_contenedor)
         
         reloj_label.value = f"⏳ RELOJ DE LA CRISIS: Quedan {stats['Dias']} días para el fin del Velo"
@@ -187,7 +186,6 @@ def main(page: ft.Page):
         stats_text.value = f"❤️ {stats['Vida']}%  |  💰 {stats['Dinero']}€  |  🔮 {stats['Mana']}/30  |  ✨ {stats['EXP']}%"
         page.update()
 
-    # FUNCIÓN DE REINICIO INDESTRUCTIBLE NATIVA DE PYTHON (Borra el archivo de guardado)
     def reiniciar(e):
         nonlocal lore_partida_contenedor
         if os.path.exists(ARCHIVO_DB):
