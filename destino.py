@@ -24,7 +24,7 @@ def main(page: ft.Page):
         "Un antiguo linaje de vampiros puros está comprando los nexos de sangre de las alcantarillas para desatar una plaga mística purificadora."
     ]
 
-    # Variables de estado directas en la memoria táctil de la página (Blindadas de fallos de tipo)
+    # Variables de estado directas en la memoria de la página
     stats = {"Vida": 100, "Dinero": 50, "Mana": 30, "EXP": 0, "Dias": 30}
     inventario_contenedor = ["Varita Básica, Capa de Viaje"]
     historial = []
@@ -36,7 +36,7 @@ def main(page: ft.Page):
     es_de_noche = 20 <= datetime.now().hour or datetime.now().hour <= 6
     estado_dia_noche = "🌌 TOQUE DE QUEDA (El velo es frágil, criaturas en los callejones, patrullas del Ministerio)" if es_de_noche else "☀️ BAJO EL VELO (La magia se esconde de los humanos, mercados mágicos abiertos, tabernas activas)"
 
-    # 3. Componentes visuales superiores unificados (Añadido el Inventario Flotante)
+    # 3. Componentes visuales superiores unificados (Inventario Flotante)
     reloj_label = ft.Text(f"⏳ RELOJ DE LA CRISIS: Quedan {stats['Dias']} días para el fin del Velo", color="#A78BFA", weight=ft.FontWeight.BOLD, size=14)
     hora_label = ft.Text(f"⏰ Tiempo Real: {hora_actual_real} | {estado_dia_noche}", color="#38BDF8", size=12, weight=ft.FontWeight.W_500)
     stats_text = ft.Text(f"❤️ {stats['Vida']}%  |  💰 {stats['Dinero']}€  |  🔮 {stats['Mana']}/30  |  ✨ {stats['EXP']}%", color="#F3F4F6", weight=ft.FontWeight.BOLD, size=15)
@@ -63,7 +63,7 @@ def main(page: ft.Page):
             padding=14, border_radius=10, bgcolor="#111827"
         )
 
-    # Pintar los mensajes iniciales de la app móvil
+    # Mensaje de bienvenida inicial de la app móvil
     chat_view.controls.append(cargar_bloque("ia", "Pensar", f"Detrás del ruidoso tráfico humano y los carteles de neón de la ciudad moderna, late un mundo oculto regido por la magia antigua, los estatutos del Velo Secreto y los decretos del Ministerio de Hechicería. Quedan 30 días reales antes de que la crisis actual rompa el equilibrio.\n\n[SITUACIÓN ECONÓMICA Y ENTORNO]\nHora actual: {hora_actual_real} ({estado_dia_noche}).\nTienes {stats['Dinero']}€ mágicos en tu monedero. Los callejones invisibles albergan mercados negros, armerías de varitas, boticarios de maná y tabernas oscuras llenas de secretos. Todo tiene un precio, y nadie regala nada.\n\nElige tu arquetipo místico escribiéndolo abajo para adentrarte en el mapa abierto: Mago Urbano, Detective, Cazador o Humano Despierto."))
     # 5. Controles inferiores
     modo_radio = ft.RadioGroup(content=ft.Row([ft.Radio(value="Pensar", label="Narrar/Pensar"), ft.Radio(value="Hablar", label="Hablar")], alignment=ft.MainAxisAlignment.CENTER))
@@ -72,7 +72,7 @@ def main(page: ft.Page):
 
     # 6. Lógica de ejecución de la IA y actualización nativa
     def enviar_accion(e):
-        nonlocal lore_partida_contenedor
+        nonlocal lore_partida_contenedor, inventario_contenedor
         if not input_texto.value: return
         txt = input_texto.value
         mod = modo_radio.value
@@ -94,7 +94,7 @@ def main(page: ft.Page):
         - Si el jugador compra un objeto, ponle un precio lógico detallado en el diálogo (ej: una Poción de Maná cuesta 15€, una Varita Rúnica nueva cuesta 45€).
         
         [RITMO DE APOCALIPSIS VARIABLE]
-        La gran amenaza final que destruirá el Velo a los 30 días es: '{str(lore_partida_contenedor)}'. Decide si revelar este peligro inmediatamente o no según la situación.
+        La gran amenaza final que destruirá el Velo a los 30 días es: '{str(lore_partida_contenedor[0])}'. Decide si revelar este peligro inmediatamente o no según la situación.
         
         [MUNDO ABIERTO Y CICLO HORARIO]
         La hora real es exactamente las {hora_envio}. Si es de noche ({es_noche_envio}), los peligros aumentan. Si el jugador ignora una tienda o rechaza una misión, acéptalo de inmediato y narra cómo el mundo sigue girando sin él.
@@ -115,26 +115,27 @@ def main(page: ft.Page):
             mensajes.append({"role": "user" if msg["rol"] == "usuario" else "assistant", "content": msg["texto"]})
 
         completion = client.chat.completions.create(model="llama-3.3-70b-versatile", messages=mensajes)
-        raw_res = str(completion.choices.message.content)
+        # EXTRACCIÓN OFICIAL CORREGIDA CON ÍNDICE [0] (Blindado total contra errores de lista):
+        raw_res = str(completion.choices[0].message.content)
 
         res_narrador = raw_res
         
-        # 1. Procesamiento ciego de la memoria
+        # 1. Procesamiento de la memoria
         if "[MEMORIA:" in raw_res:
             partes_lore = raw_res.split("[MEMORIA:")
             res_narrador = partes_lore[0]
             contenido_lore = partes_lore[1].replace("]", "").replace('"', '').strip()
             lore_partida_contenedor = [contenido_lore]
 
-        # 2. Procesamiento ciego del inventario flotante
+        # 2. Procesamiento del inventario flotante
         if "[INVENTARIO:" in raw_res:
             partes_inv = raw_res.split("[INVENTARIO:")
             if "[MEMORIA:" not in partes_inv[0]:
                 res_narrador = partes_inv[0]
             contenido_inv = partes_inv[1].split("]")[0].strip()
-            inventario_contenedor[0] = contenido_inv
+            inventario_contenedor = [contenido_inv]
 
-        # 3. Procesamiento ciego de las estadísticas económicas
+        # 3. Procesamiento de las estadísticas económicas
         if "[ESTADÍSTICAS:" in raw_res:
             partes_cambios = raw_res.split("[ESTADÍSTICAS:")
             if "[INVENTARIO:" not in partes_cambios[0] and "[MEMORIA:" not in partes_cambios[0]:
@@ -152,7 +153,7 @@ def main(page: ft.Page):
                         stats[k] = v
                 except: pass
 
-        # Mostrar respuesta del Narrador limpia de bloques y actualizar la pantalla
+        # Mostrar respuesta limpia del Narrador y actualizar la pantalla táctil
         chat_view.controls.append(cargar_bloque("ia", "Pensar", res_narrador.strip()))
         historial.append({"rol": "ia", "texto": res_narrador.strip()})
         
@@ -163,13 +164,13 @@ def main(page: ft.Page):
         page.update()
 
     def reiniciar(e):
-        nonlocal lore_partida_contenedor
+        nonlocal lore_partida_contenedor, inventario_contenedor
         stats["Vida"] = 100
         stats["Dinero"] = 50
         stats["Mana"] = 30
         stats["EXP"] = 0
         stats["Dias"] = 30
-        inventario_contenedor[0] = "Varita Básica, Capa de Viaje"
+        inventario_contenedor = ["Varita Básica, Capa de Viaje"]
         historial.clear()
         
         nueva_semilla = random.choice(semillas_amenaza_final)
