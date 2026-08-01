@@ -51,12 +51,11 @@ def main(page: ft.Page):
     # Conexión segura con la IA de Groq en Render
     client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
 
-    # GENERAR O RECUPERAR IDENTIFICADOR CORREGIDO MEDIANTE DICIONARIO DE FLET
-    if "uid_movil" not in page.session:
-        nuevo_id = str(random.randint(10, 99))  # Asigna un canal numérico único en la DB externa
-        page.session["uid_movil"] = nuevo_id
+    # SOLUCIÓN DEFINITIVA A RESTRICCIONES DE SESIÓN: Creamos un ID aleatorio local blindado en el objeto page
+    if not hasattr(page, "_uid_movil_seguro"):
+        page._uid_movil_seguro = str(random.randint(10, 99))
     
-    id_movil = page.session["uid_movil"]
+    id_movil = page._uid_movil_seguro
 
     # Catálogo de amenazas límite para los 30 días reales
     semillas_amenaza_final = [
@@ -198,7 +197,7 @@ def main(page: ft.Page):
         chat_view.controls.append(cargar_bloque("ia", "Pensar", res_narrador.strip()))
         historial.append({"rol": "ia", "texto": res_narrador.strip()})
         
-        # Guardado en internet
+        # Guardado en internet indestructible
         guardar_datos_remotos(id_movil, stats, historial, lore_partida_contenedor, existe_partida)
         existe_partida = True
         
