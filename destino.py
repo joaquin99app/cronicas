@@ -51,8 +51,12 @@ def main(page: ft.Page):
     # Conexión segura con la IA de Groq en Render
     client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
 
-    # Crear una huella digital fija para identificar este teléfono móvil concreto
-    id_movil = "1"  # ID único global para tu instalación
+    # GENERAR O RECUPERAR IDENTIFICADOR DE TELÉFONO INDIVIDUAL SEGURO
+    if not page.session.get("uid_movil"):
+        nuevo_id = str(random.randint(10, 99)) # Asigna un canal numérico único en la DB externa
+        page.session.set("uid_movil", nuevo_id)
+    
+    id_movil = page.session.get("uid_movil")
 
     # Catálogo de amenazas límite para los 30 días reales
     semillas_amenaza_final = [
@@ -116,7 +120,7 @@ def main(page: ft.Page):
     else:
         for msg in historial:
             chat_view.controls.append(cargar_bloque(msg["rol"], msg.get("modo", "Pensar"), msg["texto"]))
-            # 5. Controles inferiores
+                # 5. Controles inferiores
     modo_radio = ft.RadioGroup(content=ft.Row([ft.Radio(value="Pensar", label="Narrar/Pensar"), ft.Radio(value="Hablar", label="Hablar")], alignment=ft.MainAxisAlignment.CENTER))
     modo_radio.value = "Pensar"
     input_texto = ft.TextField(hint_text="¿Qué dirección toma tu voluntad?", bgcolor="#111827", border_color="#1E293B", expand=True)
@@ -156,7 +160,7 @@ def main(page: ft.Page):
         
         AL FINAL ABSOLUTO de tu mensaje, incluye estrictamente estos dos bloques en este formato exacto:
         1. [ESTADÍSTICAS: Vida=VALOR_FINAL, Dinero=VALOR_FINAL, Mana=VALOR_FINAL, EXP=VALOR_FINAL, Dias=VALOR_FINAL]
-        2. [MEMORIA: \"Resumen corto de la trama, inventario actual del jugador o situación\"].
+        2. [MEMORIA: "Resumen corto de la trama, inventario actual del jugador o situación"].
         """
 
         mensajes = [{"role": "system", "content": prompt_sistema}]
@@ -164,8 +168,6 @@ def main(page: ft.Page):
             mensajes.append({"role": "user" if msg["rol"] == "usuario" else "assistant", "content": msg["texto"]})
 
         completion = client.chat.completions.create(model="llama-3.3-70b-versatile", messages=mensajes)
-        
-        # --- AQUÍ APLICAMOS EL ÍNDICE [0] OFICIAL PARA BLINDAR EL EXTRACTOR CONTRA EL ERROR DE LISTA ---
         raw_res = str(completion.choices[0].message.content)
 
         res_narrador = raw_res
@@ -223,7 +225,7 @@ def main(page: ft.Page):
         lore_partida_contenedor = [f"Amenaza de extinción oculta elegida: {nueva_semilla}"]
         
         chat_view.controls.clear()
-        chat_view.controls.append(cargar_bloque("ia", "Pensar", f"Detrás del ruidoso tráfico humano y los carteles de neón de la ciudad moderna, late un world oculto regido por la magia antigua, los estatutos del Velo Secreto y los decretos del Ministerio de Hechicería. Quedan 30 días reales de estabilidad existencial antes de que un desastre irreversible arrastre este world al olvido.\n\n[SITUACIÓN ECONÓMICA Y ENTORNO]\nHora actual: {datetime.now().strftime('%H:%M')} . Los callejones invisibles albergan mercados negros, armerías de varitas, boticarios de maná y tabernas oscuras llenas de secretos. Todo tiene un precio.\n\nElige tu arquetipo maldito escribiéndolo abajo: Mago Urbano, Detective, Cazador o Humano Despierto."))
+        chat_view.controls.append(cargar_bloque("ia", "Pensar", f"Detrás del ruidoso tráfico humano y los carteles de neón de la ciudad moderna, late un mundo oculto regido por la magia antigua, los estatutos del Velo Secreto y los decretos del Ministerio de Hechicería. Quedan 30 días reales de estabilidad existencial antes de que un desastre irreversible arrastre este mundo al olvido.\n\n[SITUACIÓN ECONÓMICA Y ENTORNO]\nHora actual: {datetime.now().strftime('%H:%M')} . Los callejones invisibles albergan mercados negros, armerías de varitas, boticarios de maná y tabernas oscuras llenas de secretos. Todo tiene un precio.\n\nElige tu arquetipo maldito escribiéndolo abajo: Mago Urbano, Detective, Cazador o Humano Despierto."))
         
         reloj_label.value = f"⏳ RELOJ DE LA CRISIS: Quedan {stats['Dias']} días para el fin del Velo"
         stats_text.value = f"❤️ {stats['Vida']}%  |  💰 {stats['Dinero']}€  |  🔮 {stats['Mana']}/30  |  ✨ {stats['EXP']}%"
@@ -246,4 +248,3 @@ def main(page: ft.Page):
     )
 
 ft.app(target=main, view=ft.AppView.WEB_BROWSER, port=8000)
-        
