@@ -3,7 +3,6 @@ from groq import Groq
 import os
 import random
 from datetime import datetime
-import json
 
 def main(page: ft.Page):
     # 1. Configuración de pantalla estilo App Móvil Premium
@@ -25,42 +24,26 @@ def main(page: ft.Page):
         "Un antiguo linaje de vampiros puros está comprando los nexos de sangre de las alcantarillas para desatar una plaga mística purificadora."
     ]
 
-    # 2. SISTEMA DE GUARDADO LOCAL FÍSICO EN EL MÓVIL (Indestructible)
-    g_stats = page.client_storage.get("rpg_v2_stats")
-    g_historial = page.client_storage.get("rpg_v2_historial")
-    g_lore = page.client_storage.get("rpg_v2_lore")
-
-    # Cargar o inicializar estadísticas fijas
-    if g_stats is not None:
-        stats = json.loads(str(g_stats))
-    else:
-        stats = {"Vida": 100, "Dinero": 50, "Mana": 30, "EXP": 0, "Dias": 30}
-
-    # Cargar o inicializar historial de mensajes
-    if g_historial is not None:
-        historial = json.loads(str(g_historial))
-    else:
-        historial = []
-
-    # Cargar o inicializar lore procedural
-    if g_lore is not None:
-        lore_partida_contenedor = json.loads(str(g_lore))
-    else:
-        semilla_inicial = random.choice(semillas_amenaza_final)
-        lore_partida_contenedor = [f"Amenaza de extinción oculta elegida: {semilla_inicial}"]
+    # Variables de estado directas en la memoria táctil de la página (Blindadas de fallos de tipo)
+    stats = {"Vida": 100, "Dinero": 50, "Mana": 30, "EXP": 0, "Dias": 30}
+    inventario_contenedor = ["Varita Básica, Capa de Viaje"]
+    historial = []
+    semilla_inicial = random.choice(semillas_amenaza_final)
+    lore_partida_contenedor = [f"Amenaza de extinción oculta elegida: {semilla_inicial}"]
 
     # Obtener el ciclo horario de 24 horas reales
     hora_actual_real = datetime.now().strftime("%H:%M")
     es_de_noche = 20 <= datetime.now().hour or datetime.now().hour <= 6
     estado_dia_noche = "🌌 TOQUE DE QUEDA (El velo es frágil, criaturas en los callejones, patrullas del Ministerio)" if es_de_noche else "☀️ BAJO EL VELO (La magia se esconde de los humanos, mercados mágicos abiertos, tabernas activas)"
 
-    # 3. Componentes visuales superiores unificados
+    # 3. Componentes visuales superiores unificados (Añadido el Inventario Flotante)
     reloj_label = ft.Text(f"⏳ RELOJ DE LA CRISIS: Quedan {stats['Dias']} días para el fin del Velo", color="#A78BFA", weight=ft.FontWeight.BOLD, size=14)
     hora_label = ft.Text(f"⏰ Tiempo Real: {hora_actual_real} | {estado_dia_noche}", color="#38BDF8", size=12, weight=ft.FontWeight.W_500)
     stats_text = ft.Text(f"❤️ {stats['Vida']}%  |  💰 {stats['Dinero']}€  |  🔮 {stats['Mana']}/30  |  ✨ {stats['EXP']}%", color="#F3F4F6", weight=ft.FontWeight.BOLD, size=15)
+    inventario_label = ft.Text(f"🎒 Inventario: {inventario_contenedor[0]}", color="#94A3B8", size=12, italic=True)
     
     stat_container = ft.Container(
-        content=ft.Column([reloj_label, hora_label, stats_text], alignment=ft.MainAxisAlignment.CENTER, horizontal_alignment=ft.CrossAxisAlignment.CENTER), 
+        content=ft.Column([reloj_label, hora_label, stats_text, ft.Divider(color="#1E293B", height=5), inventario_label], alignment=ft.MainAxisAlignment.CENTER, horizontal_alignment=ft.CrossAxisAlignment.CENTER), 
         padding=15, border_radius=12, gradient=ft.LinearGradient(colors=["#0F172A", "#1E1B4B"])
     )
 
@@ -80,18 +63,14 @@ def main(page: ft.Page):
             padding=14, border_radius=10, bgcolor="#111827"
         )
 
-    # Pintar los mensajes guardados o el de bienvenida si está vacío
-    if not historial:
-        chat_view.controls.append(cargar_bloque("ia", "Pensar", f"Detrás del ruidoso tráfico humano y los carteles de neón de la ciudad moderna, late un mundo oculto regido por la magia antigua, los estatutos del Velo Secreto y los decretos del Ministerio de Hechicería. Quedan 30 días reales antes de que la crisis actual rompa el equilibrio.\n\n[SITUACIÓN ECONÓMICA Y ENTORNO]\nHora actual: {hora_actual_real} ({estado_dia_noche}).\nTienes {stats['Dinero']}€ mágicos en tu monedero de cuero. Los callejones invisibles albergan mercados negros, armerías de varitas, boticarios de maná y tabernas oscuras llenas de secretos. Todo tiene un precio, y nadie regala nada.\n\nElige tu arquetipo místico escribiéndolo abajo para adentrarte en el mapa abierto: Mago Urbano, Detective, Cazador o Humano Despierto."))
-    else:
-        for msg in historial:
-            chat_view.controls.append(cargar_bloque(msg["rol"], msg.get("modo", "Pensar"), msg["texto"]))
+    # Pintar los mensajes iniciales de la app móvil
+    chat_view.controls.append(cargar_bloque("ia", "Pensar", f"Detrás del ruidoso tráfico humano y los carteles de neón de la ciudad moderna, late un mundo oculto regido por la magia antigua, los estatutos del Velo Secreto y los decretos del Ministerio de Hechicería. Quedan 30 días reales antes de que la crisis actual rompa el equilibrio.\n\n[SITUACIÓN ECONÓMICA Y ENTORNO]\nHora actual: {hora_actual_real} ({estado_dia_noche}).\nTienes {stats['Dinero']}€ mágicos en tu monedero. Los callejones invisibles albergan mercados negros, armerías de varitas, boticarios de maná y tabernas oscuras llenas de secretos. Todo tiene un precio, y nadie regala nada.\n\nElige tu arquetipo místico escribiéndolo abajo para adentrarte en el mapa abierto: Mago Urbano, Detective, Cazador o Humano Despierto."))
     # 5. Controles inferiores
     modo_radio = ft.RadioGroup(content=ft.Row([ft.Radio(value="Pensar", label="Narrar/Pensar"), ft.Radio(value="Hablar", label="Hablar")], alignment=ft.MainAxisAlignment.CENTER))
     modo_radio.value = "Pensar"
     input_texto = ft.TextField(hint_text="¿Qué dirección toma tu voluntad?", bgcolor="#111827", border_color="#1E293B", expand=True)
 
-    # 6. Lógica de ejecución de la IA al pulsar el botón
+    # 6. Lógica de ejecución de la IA y actualización nativa
     def enviar_accion(e):
         nonlocal lore_partida_contenedor
         if not input_texto.value: return
@@ -107,26 +86,28 @@ def main(page: ft.Page):
         es_noche_envio = 20 <= datetime.now().hour or datetime.now().hour <= 6
 
         prompt_sistema = f"""
-        Actúa como el Game Master de un RPG conversacional de Fantasía Urbana Contemporánea (estilo el mundo oculto de Harry Potter o Cazadores de Sombras, pero adulto, realista y cruel). Tu estilo es denso, literario y profundamente descriptivo.
+        Actúa como el Game Master de un RPG conversacional de Fantasía Urbana Contemporánea. Tu estilo es denso, literario y profundamente descriptivo.
         
         [SISTEMA ECONÓMICO REAL Y COMERCIO PROFUNDO]
-        - Gestionas una economía estricta. Todo tiene un precio real en Euros (€). No regales estadísticas ni dinero porque sí; ganar dinero debe ser difícil (trabajos para el Ministerio, venta de reliquias saqueadas, apuestas de duelos).
-        - Despliega un abanico inmenso de TIENDAS MÍSTICAS según donde vaya el jugador: Armerías de varitas/runas, boticarios clandestinos de pociones de maná/vida, mercados negros de reliquias, tabernas mágicas (donde comprar comida/bebida o pagar habitaciones para curarse), o casas de empeño de almas (dinero a cambio de bajar su Vida Máxima).
+        - Gestionas una economía estricta. Todo tiene un precio real en Euros (€). No regales estadísticas ni dinero porque sí; ganar dinero debe ser difícil.
+        - Despliega un abanico inmenso de TIENDAS MÍSTICAS según donde vaya el jugador: Armerías de varitas/runas, boticarios clandestinos de pociones de maná/vida, mercados negros de reliquias, tabernas mágicas, o casas de empeño de almas.
         - Si el jugador compra un objeto, ponle un precio lógico detallado en el diálogo (ej: una Poción de Maná cuesta 15€, una Varita Rúnica nueva cuesta 45€).
         
         [RITMO DE APOCALIPSIS VARIABLE]
         La gran amenaza final que destruirá el Velo a los 30 días es: '{str(lore_partida_contenedor)}'. Decide si revelar este peligro inmediatamente o no según la situación.
         
         [MUNDO ABIERTO Y CICLO HORARIO]
-        La hora real es exactamente las {hora_envio}. Si es de noche ({es_noche_envio}), los mercados negros abren y las criaturas de los callejones son letales. Si el jugador ignora una tienda o rechaza una misión, acéptalo de inmediato y narra cómo el mundo sigue girando sin él.
+        La hora real es exactamente las {hora_envio}. Si es de noche ({es_noche_envio}), los peligros aumentan. Si el jugador ignora una tienda o rechaza una misión, acéptalo de inmediato y narra cómo el mundo sigue girando sin él.
         
         [REGLA DE ASIGNACIÓN CRÍTICA DE MARCADORES]
-        Al final de tu respuesta, debes evaluar las estadísticas del jugador. REGLA: Los números que pongas en [ESTADÍSTICAS] sustituirán por completo a los anteriores. NO son incrementos, son los NUEVOS VALORES FIJOS. No los subas sin sentido. Si compra algo, resta el dinero. Si sufre daño, baja la vida.
+        Al final de tu respuesta, debes evaluar las estadísticas y el inventario del jugador. REGLA: Los números y el texto que pongas sustituirán por completo a los anteriores. NO son incrementos, son los NUEVOS VALORES FIJOS. No los subas sin sentido. Si compra algo, resta el dinero y añádelo al inventario.
         Valores actuales del jugador antes de tu turno: Vida={stats['Vida']}, Dinero={stats['Dinero']}, Mana={stats['Mana']}, EXP={stats['EXP']}, Dias={stats['Dias']}.
+        Inventario actual: '{inventario_contenedor[0]}'.
         
-        AL FINAL ABSOLUTO de tu mensaje, incluye estrictamente estos dos bloques en este formato exacto:
+        AL FINAL ABSOLUTO de tu mensaje, incluye estrictamente estos tres bloques en este formato exacto:
         1. [ESTADÍSTICAS: Vida=VALOR_FINAL, Dinero=VALOR_FINAL, Mana=VALOR_FINAL, EXP=VALOR_FINAL, Dias=VALOR_FINAL]
-        2. [MEMORIA: "Resumen corto de la trama, inventario actual del jugador o situación"].
+        2. [INVENTARIO: Escribe aquí la lista completa de objetos separados por comas]
+        3. [MEMORIA: "Resumen corto de la trama, sospechosos descubiertos o situación"].
         """
 
         mensajes = [{"role": "system", "content": prompt_sistema}]
@@ -134,19 +115,29 @@ def main(page: ft.Page):
             mensajes.append({"role": "user" if msg["rol"] == "usuario" else "assistant", "content": msg["texto"]})
 
         completion = client.chat.completions.create(model="llama-3.3-70b-versatile", messages=mensajes)
-        raw_res = str(completion.choices[0].message.content)
+        raw_res = str(completion.choices.message.content)
 
         res_narrador = raw_res
         
+        # 1. Procesamiento ciego de la memoria
         if "[MEMORIA:" in raw_res:
             partes_lore = raw_res.split("[MEMORIA:")
             res_narrador = partes_lore[0]
             contenido_lore = partes_lore[1].replace("]", "").replace('"', '').strip()
             lore_partida_contenedor = [contenido_lore]
 
+        # 2. Procesamiento ciego del inventario flotante
+        if "[INVENTARIO:" in raw_res:
+            partes_inv = raw_res.split("[INVENTARIO:")
+            if "[MEMORIA:" not in partes_inv[0]:
+                res_narrador = partes_inv[0]
+            contenido_inv = partes_inv[1].split("]")[0].strip()
+            inventario_contenedor[0] = contenido_inv
+
+        # 3. Procesamiento ciego de las estadísticas económicas
         if "[ESTADÍSTICAS:" in raw_res:
             partes_cambios = raw_res.split("[ESTADÍSTICAS:")
-            if "[MEMORIA:" not in partes_cambios[0]:
+            if "[INVENTARIO:" not in partes_cambios[0] and "[MEMORIA:" not in partes_cambios[0]:
                 res_narrador = partes_cambios[0]
             
             cambios_str = partes_cambios[1].split("]")[0].strip()
@@ -161,32 +152,24 @@ def main(page: ft.Page):
                         stats[k] = v
                 except: pass
 
-        # Guardar la respuesta final de la IA en la lista
+        # Mostrar respuesta del Narrador limpia de bloques y actualizar la pantalla
         chat_view.controls.append(cargar_bloque("ia", "Pensar", res_narrador.strip()))
         historial.append({"rol": "ia", "texto": res_narrador.strip()})
-
-        # --- APLICACIÓN DEL GUARDADO SEGURO FÍSICO EN EL MÓVIL ---
-        page.client_storage.set("rpg_v2_stats", json.dumps(stats))
-        page.client_storage.set("rpg_v2_historial", json.dumps(historial))
-        page.client_storage.set("rpg_v2_lore", json.dumps(lore_partida_contenedor))
         
         reloj_label.value = f"⏳ RELOJ DE LA CRISIS: Quedan {stats['Dias']} días para el fin del Velo"
         hora_label.value = f"⏰ Tiempo Real: {datetime.now().strftime('%H:%M')} | {'🌌 TOQUE DE QUEDA' if (20 <= datetime.now().hour or datetime.now().hour <= 6) else '☀️ BAJO EL VELO'}"
         stats_text.value = f"❤️ {stats['Vida']}%  |  💰 {stats['Dinero']}€  |  🔮 {stats['Mana']}/30  |  ✨ {stats['EXP']}%"
+        inventario_label.value = f"🎒 Inventario: {inventario_contenedor[0]}"
         page.update()
 
-    # FUNCIÓN DE REINICIO FÍSICA Y VISUAL (Limpia el almacenamiento local del teléfono)
     def reiniciar(e):
         nonlocal lore_partida_contenedor
-        page.client_storage.remove("rpg_v2_stats")
-        page.client_storage.remove("rpg_v2_historial")
-        page.client_storage.remove("rpg_v2_lore")
-        
         stats["Vida"] = 100
         stats["Dinero"] = 50
         stats["Mana"] = 30
         stats["EXP"] = 0
         stats["Dias"] = 30
+        inventario_contenedor[0] = "Varita Básica, Capa de Viaje"
         historial.clear()
         
         nueva_semilla = random.choice(semillas_amenaza_final)
@@ -197,6 +180,7 @@ def main(page: ft.Page):
         
         reloj_label.value = f"⏳ RELOJ DE LA CRISIS: Quedan {stats['Dias']} días para el fin del Velo"
         stats_text.value = f"❤️ {stats['Vida']}%  |  💰 {stats['Dinero']}€  |  🔮 {stats['Mana']}/30  |  ✨ {stats['EXP']}%"
+        inventario_label.value = f"🎒 Inventario: {inventario_contenedor[0]}"
         page.update()
 
     btn_enviar = ft.ElevatedButton(
