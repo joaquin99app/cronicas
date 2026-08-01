@@ -4,27 +4,39 @@ import os
 import random
 from datetime import datetime
 import json
+import urllib.request
 
-# ARCHIVO DE COPIA DE SEGURIDAD INDESTRUCTIBLE EN EL SERVIDOR
-ARCHIVO_DB = "partida_guardada.json"
+# CONEXIÓN BLINDADA A BASE DE DATOS EXTERNA GRATUITA (Inmune a los apagones de Render)
+URL_DB = "https://mockapi.io"
 
-def cargar_datos_seguros():
-    if os.path.exists(ARCHIVO_DB):
-        try:
-            with open(ARCHIVO_DB, "r", encoding="utf-8") as f:
-                return json.load(f)
-        except:
-            pass
-    return {
-        "stats": {"Vida": 100, "Dinero": 50, "Mana": 30, "EXP": 0, "Dias": 30},
-        "historial": [],
-        "lore_partida": ""
-    }
-
-def guardar_datos_seguros(stats, historial, lore):
+def cargar_datos_remotos(id_sesion):
     try:
-        with open(ARCHIVO_DB, "w", encoding="utf-8") as f:
-            json.dump({"stats": stats, "historial": historial, "lore_partida": lore}, f, ensure_ascii=False, indent=4)
+        req = urllib.request.Request(f"{URL_DB}/{id_sesion}", headers={'User-Agent': 'Mozilla/5.0'})
+        with urllib.request.urlopen(req, timeout=5) as response:
+            data = json.loads(response.read().decode('utf-8'))
+            return {
+                "stats": json.loads(data["stats"]),
+                "historial": json.loads(data["historial"]),
+                "lore_partida": json.loads(data["lore_partida"])
+            }
+    except:
+        return None
+
+def guardar_datos_remotos(id_sesion, stats, historial, lore, existe):
+    try:
+        payload = json.dumps({
+            "id": id_sesion,
+            "stats": json.dumps(stats),
+            "historial": json.dumps(historial),
+            "lore_partida": json.dumps(lore)
+        }).encode('utf-8')
+        
+        metodo = "PUT" if existe else "POST"
+        url_final = f"{URL_DB}/{id_sesion}" if existe else URL_DB
+        
+        req = urllib.request.Request(url_final, data=payload, headers={'Content-Type': 'application/json', 'User-Agent': 'Mozilla/5.0'}, method=metodo)
+        with urllib.request.urlopen(req, timeout=5) as response:
+            pass
     except:
         pass
 
@@ -39,6 +51,9 @@ def main(page: ft.Page):
     # Conexión segura con la IA de Groq en Render
     client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
 
+    # Crear una huella digital fija para identificar este teléfono móvil concreto
+    id_movil = "1"  # ID único global para tu instalación
+
     # Catálogo de amenazas límite para los 30 días reales
     semillas_amenaza_final = [
         "El motor de transmutación del Ministerio de Magia ha sido infectado por una maldición de óxido eterno que disuelve el maná de la ciudad.",
@@ -48,17 +63,21 @@ def main(page: ft.Page):
         "Un antiguo linaje de vampiros puros está comprando los nexos de sangre de las alcantarillas para desatar una plaga mística purificadora."
     ]
 
-    # CARGA SEGURA DE DATOS DESDE EL ARCHIVO INDESTRUCTIBLE DE PYTHON
-    datos_partida = cargar_datos_seguros()
-    stats = datos_partida["stats"]
-    historial = datos_partida["historial"]
-    
-    if not datos_partida["lore_partida"]:
+    # CARGA HISTÓRICA DESDE LA BASE DE DATOS EXTERNA DE INTERNET
+    datos_remotos = cargar_datos_remotos(id_movil)
+    existe_partida = False
+
+    if datos_remotos:
+        stats = datos_remotos["stats"]
+        historial = datos_remotos["historial"]
+        lore_partida_contenedor = datos_remotos["lore_partida"]
+        existe_partida = True
+    else:
+        stats = {"Vida": 100, "Dinero": 50, "Mana": 30, "EXP": 0, "Dias": 30}
+        historial = []
         semilla_inicial = random.choice(semillas_amenaza_final)
         lore_partida_contenedor = [f"Amenaza de extinción oculta elegida: {semilla_inicial}"]
-        guardar_datos_seguros(stats, historial, lore_partida_contenedor)
-    else:
-        lore_partida_contenedor = datos_partida["lore_partida"]
+        guardar_datos_remotos(id_movil, stats, historial, lore_partida_contenedor, False)
 
     # Obtener el ciclo horario de 24 horas reales
     hora_actual_real = datetime.now().strftime("%H:%M")
@@ -91,20 +110,20 @@ def main(page: ft.Page):
             padding=14, border_radius=10, bgcolor="#111827"
         )
 
-    # Reconstruir todo el chat histórico guardado
+    # Reconstruir el chat desde la base de datos externa remota
     if not historial:
         chat_view.controls.append(cargar_bloque("ia", "Pensar", f"Detrás del ruidoso tráfico humano y los carteles de neón de la ciudad moderna, late un mundo oculto regido por la magia antigua, los estatutos del Velo Secreto y los decretos del Ministerio de Hechicería. Quedan 30 días reales antes de que la crisis actual rompa el equilibrio.\n\n[SITUACIÓN ECONÓMICA Y ENTORNO]\nHora actual: {hora_actual_real} ({estado_dia_noche}).\nTienes {stats['Dinero']}€ mágicos en tu monedero de cuero. Los callejones invisibles albergan mercados negros, armerías de varitas, boticarios de maná y tabernas oscuras llenas de secretos. Todo tiene un precio, y nadie regala nada.\n\nElige tu arquetipo místico escribiéndolo abajo para adentrarte en el mapa abierto: Mago Urbano, Detective, Cazador o Humano Despierto."))
     else:
         for msg in historial:
             chat_view.controls.append(cargar_bloque(msg["rol"], msg.get("modo", "Pensar"), msg["texto"]))
-    # 5. Controles inferiores
+                # 5. Controles inferiores
     modo_radio = ft.RadioGroup(content=ft.Row([ft.Radio(value="Pensar", label="Narrar/Pensar"), ft.Radio(value="Hablar", label="Hablar")], alignment=ft.MainAxisAlignment.CENTER))
     modo_radio.value = "Pensar"
     input_texto = ft.TextField(hint_text="¿Qué dirección toma tu voluntad?", bgcolor="#111827", border_color="#1E293B", expand=True)
 
     # 6. Lógica de ejecución de la IA al pulsar el botón
     def enviar_accion(e):
-        nonlocal lore_partida_contenedor
+        nonlocal lore_partida_contenedor, existe_partida
         if not input_texto.value: return
         txt = input_texto.value
         mod = modo_radio.value
@@ -118,18 +137,18 @@ def main(page: ft.Page):
         es_noche_envio = 20 <= datetime.now().hour or datetime.now().hour <= 6
 
         prompt_sistema = f"""
-        Actúa como el Game Master de un RPG conversacional de Fantasía Urbana Contemporánea (estilo el mundo oculto de Harry Potter o Cazadores de Sombras, pero adulto, realista y cruel). Tu estilo es denso, literario y profundamente descriptivo.
+        Actúa como el Game Master de un RPG conversacional de Fantasía Urbana Contemporánea. Tu estilo es denso, literario y profundamente descriptivo.
         
         [SISTEMA ECONÓMICO REAL Y COMERCIO PROFUNDO]
-        - Gestionas una economía estricta. Todo tiene un precio real en Euros (€). No regales estadísticas ni dinero porque sí; ganar dinero debe ser difícil (trabajos para el Ministerio, venta de reliquias saqueadas, apuestas de duelos).
-        - Despliega un abanico inmenso de TIENDAS MÍSTICAS según donde vaya el jugador: Armerías de varitas/runas, boticarios clandestinos de pociones de maná/vida, mercados negros de reliquias, tabernas mágicas, o casas de empeño de almas.
-        - Si el jugador compra un objeto, ponle un precio lógico detallado en el diálogo (ej: una Poción de Maná cuesta 15€, una Varita Rúnica nueva cuesta 45€).
+        - Gestionas una economía estricta. Todo tiene un precio real en Euros (€). No regales estadísticas ni dinero porque sí; ganar dinero debe ser difícil.
+        - Despliega un abanico inmenso de TIENDAS MÍSTICAS según donde vaya el jugador: Armerías de varitas, boticarios de pociones, mercados negros de reliquias, tabernas mágicas, etc.
+        - Si el jugador compra un objeto, ponle un precio lógico detallado en el diálogo.
         
         [RITMO DE APOCALIPSIS VARIABLE]
         La gran amenaza final que destruirá el Velo a los 30 días es: '{str(lore_partida_contenedor)}'. Decide si revelar este peligro inmediatamente o no según la situación.
         
         [MUNDO ABIERTO Y CICLO HORARIO]
-        La hora real es exactamente las {hora_envio}. Si es de noche ({es_noche_envio}), los mercados negros abren y las criaturas de los callejones son letales. Si el jugador ignora una tienda o rechaza una misión, acéptalo de inmediato y narra cómo el mundo sigue girando sin él.
+        La hora real es exactamente las {hora_envio}. Si es de noche ({es_noche_envio}), los peligros aumentan. Si el jugador ignora una tienda o rechaza una misión, acéptalo de inmediato y narra cómo el mundo sigue girando sin él.
         
         [REGLA DE ASIGNACIÓN CRÍTICA DE MARCADORES]
         Al final de tu respuesta, debes evaluar las estadísticas del jugador. REGLA: Los números que pongas en [ESTADÍSTICAS] sustituirán por completo a los anteriores. NO son incrementos, son los NUEVOS VALORES FIJOS. No los subas sin sentido. Si compra algo, resta el dinero. Si sufre daño, baja la vida.
@@ -145,24 +164,22 @@ def main(page: ft.Page):
             mensajes.append({"role": "user" if msg["rol"] == "usuario" else "assistant", "content": msg["texto"]})
 
         completion = client.chat.completions.create(model="llama-3.3-70b-versatile", messages=mensajes)
-        
-        # EXTRACCIÓN PERMANENTE CORREGIDA MEDIANTE ÍNDICE DE LISTA SEGURO:
-        raw_res = str(completion.choices[0].message.content)
+        raw_res = str(completion.choices.message.content)
 
         res_narrador = raw_res
         
         if "[MEMORIA:" in raw_res:
             partes_lore = raw_res.split("[MEMORIA:")
-            res_narrador = partes_lore[0]
-            contenido_lore = partes_lore[1].replace("]", "").replace('"', '').strip()
+            res_narrador = partes_lore
+            contenido_lore = partes_lore.replace("]", "").replace('"', '').strip()
             lore_partida_contenedor = [contenido_lore]
 
         if "[ESTADÍSTICAS:" in raw_res:
             partes_cambios = raw_res.split("[ESTADÍSTICAS:")
-            if "[MEMORIA:" not in partes_cambios[0]:
-                res_narrador = partes_cambios[0]
+            if "[MEMORIA:" not in partes_cambios:
+                res_narrador = partes_cambios
             
-            cambios_str = partes_cambios[1].split("]")[0].strip()
+            cambios_str = partes_cambios.split("]").strip()
             for cambio in cambios_str.split(","):
                 try:
                     clave, valor = cambio.split("=")
@@ -174,23 +191,25 @@ def main(page: ft.Page):
                         stats[k] = v
                 except: pass
 
-        # Añadir al panel del móvil
         chat_view.controls.append(cargar_bloque("ia", "Pensar", res_narrador.strip()))
         historial.append({"rol": "ia", "texto": res_narrador.strip()})
         
-        # EN CADA MENSAJE GUARDAMOS EN EL ARCHIVO COMPATIBLE DE PYTHON
-        guardar_datos_seguros(stats, historial, lore_partida_contenedor)
+        # --- GUARDADO PERMANENTE EN LA BASE DE DATOS DE INTERNET ---
+        guardar_datos_remotos(id_movil, stats, historial, lore_partida_contenedor, existe_partida)
+        existe_partida = True
         
         reloj_label.value = f"⏳ RELOJ DE LA CRISIS: Quedan {stats['Dias']} días para el fin del Velo"
         hora_label.value = f"⏰ Tiempo Real: {datetime.now().strftime('%H:%M')} | {'🌌 TOQUE DE QUEDA' if (20 <= datetime.now().hour or datetime.now().hour <= 6) else '☀️ BAJO EL VELO'}"
         stats_text.value = f"❤️ {stats['Vida']}%  |  💰 {stats['Dinero']}€  |  🔮 {stats['Mana']}/30  |  ✨ {stats['EXP']}%"
         page.update()
 
+    # FUNCIÓN DE REINICIO ABSOLUTO (Limpia también la base de datos de internet)
     def reiniciar(e):
-        nonlocal lore_partida_contenedor
-        if os.path.exists(ARCHIVO_DB):
-            try: os.remove(ARCHIVO_DB)
-            except: pass
+        Metodo_Borrar = "DELETE"
+        try:
+            req = urllib.request.Request(f"{URL_DB}/{id_movil}", headers={'User-Agent': 'Mozilla/5.0'}, method=Metodo_Borrar)
+            with urllib.request.urlopen(req, timeout=5) as response: pass
+        except: pass
             
         stats["Vida"] = 100
         stats["Dinero"] = 50
@@ -226,3 +245,4 @@ def main(page: ft.Page):
     )
 
 ft.app(target=main, view=ft.AppView.WEB_BROWSER, port=8000)
+        
