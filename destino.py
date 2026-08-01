@@ -3,9 +3,7 @@ from groq import Groq
 import os
 import random
 from datetime import datetime
-
-# BASE DE DATOS BLINDADA EN EL SERVIDOR (Almacena las partidas por usuario de forma limpia)
-SERVIDOR_PARTIDAS = {}
+import json
 
 def main(page: ft.Page):
     # 1. Configuración de pantalla estilo App Móvil Premium
@@ -18,12 +16,6 @@ def main(page: ft.Page):
     # Conexión segura con la IA de Groq en Render
     client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
 
-    # Identificador único de red por pestaña
-    if not hasattr(page, "_id_sesion_segura"):
-        page._id_sesion_segura = str(random.randint(100000, 999999))
-    
-    id_id = page._id_sesion_segura
-
     # Catálogo de amenazas límite para los 30 días reales
     semillas_amenaza_final = [
         "El motor de transmutación del Ministerio de Magia ha sido infectado por una maldición de óxido eterno que disuelve el maná de la ciudad.",
@@ -33,18 +25,29 @@ def main(page: ft.Page):
         "Un antiguo linaje de vampiros puros está comprando los nexos de sangre de las alcantarillas para desatar una plaga mística purificadora."
     ]
 
-    # Inicializar partida en la memoria de Python si el usuario es nuevo
-    if id_id not in SERVIDOR_PARTIDAS:
-        semilla_inicial = random.choice(semillas_amenaza_final)
-        SERVIDOR_PARTIDAS[id_id] = {
-            "stats": {"Vida": 100, "Dinero": 50, "Mana": 30, "EXP": 0, "Dias": 30},
-            "historial": [],
-            "lore": [f"Amenaza de extinción oculta elegida: {semilla_inicial}"]
-        }
+    # 2. SISTEMA DE GUARDADO LOCAL FÍSICO EN EL MÓVIL (Indestructible)
+    g_stats = page.client_storage.get("rpg_v2_stats")
+    g_historial = page.client_storage.get("rpg_v2_historial")
+    g_lore = page.client_storage.get("rpg_v2_lore")
 
-    stats = SERVIDOR_PARTIDAS[id_id]["stats"]
-    historial = SERVIDOR_PARTIDAS[id_id]["historial"]
-    lore_partida_contenedor = SERVIDOR_PARTIDAS[id_id]["lore"]
+    # Cargar o inicializar estadísticas fijas
+    if g_stats is not None:
+        stats = json.loads(str(g_stats))
+    else:
+        stats = {"Vida": 100, "Dinero": 50, "Mana": 30, "EXP": 0, "Dias": 30}
+
+    # Cargar o inicializar historial de mensajes
+    if g_historial is not None:
+        historial = json.loads(str(g_historial))
+    else:
+        historial = []
+
+    # Cargar o inicializar lore procedural
+    if g_lore is not None:
+        lore_partida_contenedor = json.loads(str(g_lore))
+    else:
+        semilla_inicial = random.choice(semillas_amenaza_final)
+        lore_partida_contenedor = [f"Amenaza de extinción oculta elegida: {semilla_inicial}"]
 
     # Obtener el ciclo horario de 24 horas reales
     hora_actual_real = datetime.now().strftime("%H:%M")
@@ -77,7 +80,7 @@ def main(page: ft.Page):
             padding=14, border_radius=10, bgcolor="#111827"
         )
 
-    # Mensaje de bienvenida inicial de Fantasía Urbana Comercial
+    # Pintar los mensajes guardados o el de bienvenida si está vacío
     if not historial:
         chat_view.controls.append(cargar_bloque("ia", "Pensar", f"Detrás del ruidoso tráfico humano y los carteles de neón de la ciudad moderna, late un mundo oculto regido por la magia antigua, los estatutos del Velo Secreto y los decretos del Ministerio de Hechicería. Quedan 30 días reales antes de que la crisis actual rompa el equilibrio.\n\n[SITUACIÓN ECONÓMICA Y ENTORNO]\nHora actual: {hora_actual_real} ({estado_dia_noche}).\nTienes {stats['Dinero']}€ mágicos en tu monedero de cuero. Los callejones invisibles albergan mercados negros, armerías de varitas, boticarios de maná y tabernas oscuras llenas de secretos. Todo tiene un precio, y nadie regala nada.\n\nElige tu arquetipo místico escribiéndolo abajo para adentrarte en el mapa abierto: Mago Urbano, Detective, Cazador o Humano Despierto."))
     else:
@@ -133,7 +136,6 @@ def main(page: ft.Page):
         completion = client.chat.completions.create(model="llama-3.3-70b-versatile", messages=mensajes)
         raw_res = str(completion.choices[0].message.content)
 
-        # SOLUCIÓN CRÍTICA: Procesamos los bloques de texto trabajando sobre strings puros, nunca listas
         res_narrador = raw_res
         
         if "[MEMORIA:" in raw_res:
@@ -144,7 +146,6 @@ def main(page: ft.Page):
 
         if "[ESTADÍSTICAS:" in raw_res:
             partes_cambios = raw_res.split("[ESTADÍSTICAS:")
-            # Aseguramos no arrastrar marcas de bloques en el mensaje final
             if "[MEMORIA:" not in partes_cambios[0]:
                 res_narrador = partes_cambios[0]
             
@@ -160,23 +161,27 @@ def main(page: ft.Page):
                         stats[k] = v
                 except: pass
 
-        # Guardar estado actualizado en la base de datos de Python
-        SERVIDOR_PARTIDAS[id_id] = {
-            "stats": stats,
-            "historial": historial,
-            "lore": lore_partida_contenedor
-        }
-
+        # Guardar la respuesta final de la IA en la lista
         chat_view.controls.append(cargar_bloque("ia", "Pensar", res_narrador.strip()))
         historial.append({"rol": "ia", "texto": res_narrador.strip()})
+
+        # --- APLICACIÓN DEL GUARDADO SEGURO FÍSICO EN EL MÓVIL ---
+        page.client_storage.set("rpg_v2_stats", json.dumps(stats))
+        page.client_storage.set("rpg_v2_historial", json.dumps(historial))
+        page.client_storage.set("rpg_v2_lore", json.dumps(lore_partida_contenedor))
         
         reloj_label.value = f"⏳ RELOJ DE LA CRISIS: Quedan {stats['Dias']} días para el fin del Velo"
         hora_label.value = f"⏰ Tiempo Real: {datetime.now().strftime('%H:%M')} | {'🌌 TOQUE DE QUEDA' if (20 <= datetime.now().hour or datetime.now().hour <= 6) else '☀️ BAJO EL VELO'}"
         stats_text.value = f"❤️ {stats['Vida']}%  |  💰 {stats['Dinero']}€  |  🔮 {stats['Mana']}/30  |  ✨ {stats['EXP']}%"
         page.update()
 
+    # FUNCIÓN DE REINICIO FÍSICA Y VISUAL (Limpia el almacenamiento local del teléfono)
     def reiniciar(e):
         nonlocal lore_partida_contenedor
+        page.client_storage.remove("rpg_v2_stats")
+        page.client_storage.remove("rpg_v2_historial")
+        page.client_storage.remove("rpg_v2_lore")
+        
         stats["Vida"] = 100
         stats["Dinero"] = 50
         stats["Mana"] = 30
@@ -186,12 +191,6 @@ def main(page: ft.Page):
         
         nueva_semilla = random.choice(semillas_amenaza_final)
         lore_partida_contenedor = [f"Amenaza de extinción oculta elegida: {nueva_semilla}"]
-        
-        SERVIDOR_PARTIDAS[id_id] = {
-            "stats": stats,
-            "historial": historial,
-            "lore": lore_partida_contenedor
-        }
         
         chat_view.controls.clear()
         chat_view.controls.append(cargar_bloque("ia", "Pensar", f"Detrás del ruidoso tráfico humano y los carteles de neón de la ciudad moderna, late un mundo oculto regido por la magia antigua, los estatutos del Velo Secreto y los decretos del Ministerio de Hechicería. Quedan 30 días reales de estabilidad existencial antes de que un desastre irreversible arrastre este mundo al olvido.\n\n[SITUACIÓN ECONÓMICA Y ENTORNO]\nHora actual: {datetime.now().strftime('%H:%M')} . Los callejones invisibles albergan mercados negros, armerías de varitas, boticarios de maná y tabernas oscuras llenas de secretos. Todo tiene un precio.\n\nElige tu arquetipo maldito escribiéndolo abajo: Mago Urbano, Detective, Cazador o Humano Despierto."))
