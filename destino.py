@@ -5,9 +5,6 @@ import random
 from datetime import datetime
 import json
 
-# BASE DE DATOS VIRTUAL EN EL SERVIDOR (No se borra al cerrar la app)
-DB_ESTADOS = {}
-
 def main(page: ft.Page):
     # 1. Configuración de pantalla estilo App Móvil Premium
     page.title = "🚨 Crónicas del Velo Mágico"
@@ -19,30 +16,27 @@ def main(page: ft.Page):
     # Conexión segura con la IA de Groq en Render
     client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
 
-    # Identificador único de la sesión del teléfono
-    session_id = page.session_id if page.session_id else "jugador_unico"
+    # 2. SISTEMA DE GUARDADO INTEGRADO EN LA MEMORIA VIRTUAL DEL SERVIDOR
+    # Usamos las propiedades nativas de la sesión de la página de Flet
+    if "stats" not in page.session:
+        page.session.set("stats", {"Vida": 100, "Dinero": 50, "Mana": 30, "EXP": 0, "Dias": 30})
+    if "historial" not in page.session:
+        page.session.set("historial", [])
+    if "lore_partida" not in page.session:
+        # Semillas de amenazas que significan el fin de la comunidad mágica a los 30 días
+        semillas_amenaza_final = [
+            "El motor de transmutación del Ministerio de Magia ha sido infectado por una maldición de óxido eterno que disuelve el maná de la ciudad.",
+            "Una secta de licántropos y magos oscuros está preparando el despertar de un dragón mitológico sepultado bajo los cimientos urbanos.",
+            "Un brote de 'estática mística' se está filtrando a través de la red eléctrica, borrando los recuerdos de los hechiceros y exponiendo el velo.",
+            "El Reloj de Arena Ancestral que mantiene la barrera de invisibilidad frente a los humanos mundanos ha sido agrietado en un sabotaje interno.",
+            "Un antiguo linaje de vampiros puros está comprando los nexos de sangre de las alcantarillas para desatar una plaga mística purificadora."
+        ]
+        semilla_actual = random.choice(semillas_amenaza_final)
+        page.session.set("lore_partida", [f"Amenaza de extinción oculta elegida: {semilla_actual}"])
 
-    # CARGAR PARTIDA DE LA BASE DE DATOS SI EXISTE
-    if session_id not in DB_ESTADOS:
-        DB_ESTADOS[session_id] = {
-            "stats": {"Vida": 100, "Dinero": 50, "Mana": 30, "EXP": 0, "Dias": 30},
-            "historial": [],
-            "lore_partida": ["Pendiente de generación inicial"]
-        }
-
-    partida = DB_ESTADOS[session_id]
-    stats = partida["stats"]
-    historial = partida["historial"]
-    lore_partida_contenedor = partida["lore_partida"]
-
-    # Semillas de amenazas que significan el fin de la comunidad mágica a los 30 días
-    semillas_amenaza_final = [
-        "El motor de transmutación del Ministerio de Magia ha sido infectado por una maldición de óxido eterno que disuelve el maná de la ciudad.",
-        "Una secta de licántropos y magos oscuros está preparando el despertar de un dragón mitológico sepultado bajo los cimientos urbanos.",
-        "Un brote de 'estática mística' se está filtrando a través de la red eléctrica, borrando los recuerdos de los hechiceros y exponiendo el velo.",
-        "El Reloj de Arena Ancestral que mantiene la barrera de invisibilidad frente a los humanos mundanos ha sido agrietado en un sabotaje interno.",
-        "Un antiguo linaje de vampiros puros está comprando los nexos de sangre de las alcantarillas para desatar una plaga mística purificadora."
-    ]
+    stats = page.session.get("stats")
+    historial = page.session.get("historial")
+    lore_partida_contenedor = page.session.get("lore_partida")
 
     # OBTENER LA HORA REAL DE LA PARTIDA (Ciclo 24 horas reales)
     hora_actual_real = datetime.now().strftime("%H:%M")
@@ -75,9 +69,9 @@ def main(page: ft.Page):
             padding=14, border_radius=10, bgcolor="#111827"
         )
 
-    # Reconstruir el chat desde la base de datos si ya había mensajes guardados
+    # Reconstruir el chat desde el almacenamiento si ya hay mensajes guardados
     if not historial:
-        chat_view.controls.append(cargar_bloque("ia", "Pensar", f"Detrás del ruidoso tráfico humano y los carteles de neón de la ciudad moderna, late un mundo oculto regido por la magia antigua, los estatutos del Velo Secreto y los decretos del Ministerio de Hechicería. Quedan 30 días reales de estabilidad existencial antes de que un desastre irreversible arrastre este mundo al olvido.\n\n[ENTORNO REAL DEL VELO]\nHora actual del dispositivo: {hora_actual_real}.\nEstado del entorno: {estado_dia_noche}.\n\nEste es un mundo abierto repleto de misterios, reliquias, tabernas mágicas escondidas y peligros. Si rechazas un camino, la historia avanzará por su cuenta sin esperarte. Elige tu arquetipo maldito: Mago Urbano, Detective, Cazador o Humano Despierto."))
+        chat_view.controls.append(cargar_bloque("ia", "Pensar", f"Detrás del ruidoso tráfico humano y los carteles de neón de la ciudad moderna, late un world oculto regido por la magia antigua, los estatutos del Velo Secreto y los decretos del Ministerio de Hechicería. Quedan 30 días reales de estabilidad existencial antes de que un desastre irreversible arrastre este mundo al olvido.\n\n[ENTORNO REAL DEL VELO]\nHora actual del dispositivo: {hora_actual_real}.\nEstado del entorno: {estado_dia_noche}.\n\nEste es un mundo abierto repleto de misterios, reliquias, tabernas mágicas escondidas y peligros. Si rechazas un camino, la historia avanzará por su cuenta sin esperarte. Elige tu arquetipo maldito: Mago Urbano, Detective, Cazador o Humano Despierto."))
     else:
         for msg in historial:
             chat_view.controls.append(cargar_bloque(msg["rol"], msg.get("modo", "Pensar"), msg["texto"]))
@@ -130,13 +124,14 @@ def main(page: ft.Page):
 
         if "[MEMORIA:" in res:
             p_lore = res.split("[MEMORIA:")
-            res = p_lore[0]
-            lore_partida_contenedor = [p_lore[1].replace("]", "").replace('"', '').strip()]
+            res = p_lore
+            lore_partida_contenedor = [p_lore.replace("]", "").replace('"', '').strip()]
+            page.session.set("lore_partida", lore_partida_contenedor)
 
         if "[CAMBIOS:" in res:
             p_cambios = res.split("[CAMBIOS:")
-            cambios_str = p_cambios[1].replace("]", "").strip()
-            res = p_cambios[0]
+            cambios_str = p_cambios.replace("]", "").strip()
+            res = p_cambios
             if "Ninguno" not in cambios_str:
                 for cambio in cambios_str.split(","):
                     try:
@@ -146,16 +141,11 @@ def main(page: ft.Page):
                         if k == "Dias": stats["Dias"] += v
                         else: stats[k] = stats.get(k, 100) + v
                     except: pass
+            page.session.set("stats", stats)
 
         chat_view.controls.append(cargar_bloque("ia", "Pensar", res))
         historial.append({"rol": "ia", "texto": res})
-        
-        # GUARDAR LOS DATOS ACTUALIZADOS EN LA BASE DE DATOS DEL SERVIDOR
-        DB_ESTADOS[session_id] = {
-            "stats": stats,
-            "historial": historial,
-            "lore_partida": lore_partida_contenedor
-        }
+        page.session.set("historial", historial)
 
         reloj_label.value = f"⏳ RELOJ DE LA CRISIS: Quedan {stats['Dias']} días para el fin del Velo"
         hora_label.value = f"⏰ Tiempo Real: {datetime.now().strftime('%H:%M')} | {'🌌 TOQUE DE QUEDA' if (20 <= datetime.now().hour or datetime.now().hour <= 6) else '☀️ BAJO EL VELO'}"
@@ -164,27 +154,8 @@ def main(page: ft.Page):
 
     def reiniciar(e):
         nonlocal lore_partida_contenedor
-        stats["Vida"] = 100
-        stats["Dinero"] = 50
-        stats["Mana"] = 30
-        stats["EXP"] = 0
-        stats["Dias"] = 30
-        historial.clear()
-        nueva_semilla = random.choice(semillas_amenaza_final)
-        lore_partida_contenedor = [f"Amenaza de extinción oculta elegida: {nueva_semilla}"]
-        
-        DB_ESTADOS[session_id] = {
-            "stats": stats,
-            "historial": historial,
-            "lore_partida": lore_partida_contenedor
-        }
-        
-        chat_view.controls.clear()
-        chat_view.controls.append(cargar_bloque("ia", "Pensar", f"Detrás del ruidoso tráfico humano y los carteles de neón de la ciudad moderna, late un mundo oculto regido por la magia antigua, los estatutos del Velo Secreto y los decretos del Ministerio de Hechicería. Quedan 30 días reales de estabilidad existencial antes de que un desastre irreversible arrastre este mundo al olvido.\n\n[ENTORNO REAL DEL VELO]\nHora actual del dispositivo: {datetime.now().strftime('%H:%M')}.\nEstado del entorno: {'🌌 TOQUE DE QUEDA' if (20 <= datetime.now().hour or datetime.now().hour <= 6) else '☀️ BAJO EL VELO'}.\n\nEste es un mundo abierto repleto de misterios, reliquias, tabernas mágicas escondidas y peligros. Si rechazas un camino, la historia avanzará por su cuenta sin esperarte. Elige tu arquetipo maldito: Mago Urbano, Detective, Cazador o Humano Despierto."))
-        
-        reloj_label.value = f"⏳ RELOJ DE LA CRISIS: Quedan {stats['Dias']} días para el fin del Velo"
-        stats_text.value = f"❤️ {stats['Vida']}%  |  💰 {stats['Dinero']}€  |  🔮 {stats['Mana']}/30  |  ✨ {stats['EXP']}%"
-        page.update()
+        page.session.clear()
+        page.window_reload()
 
     btn_enviar = ft.ElevatedButton(
         content=ft.Text("🚀 ALTERAR EL DESTINO", color="white", weight=ft.FontWeight.BOLD),
