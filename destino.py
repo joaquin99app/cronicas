@@ -3,6 +3,10 @@ from groq import Groq
 import os
 import random
 from datetime import datetime
+import json
+
+# BASE DE DATOS VIRTUAL EN EL SERVIDOR (No se borra al cerrar la app)
+DB_ESTADOS = {}
 
 def main(page: ft.Page):
     # 1. Configuración de pantalla estilo App Móvil Premium
@@ -15,10 +19,22 @@ def main(page: ft.Page):
     # Conexión segura con la IA de Groq en Render
     client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
 
-    # 2. Variables de estado directas de la partida (Reiniciables de forma segura)
-    stats = {"Vida": 100, "Dinero": 50, "Mana": 30, "EXP": 0, "Dias": 30}
-    historial = []
-    
+    # Identificador único de la sesión del teléfono
+    session_id = page.session_id if page.session_id else "jugador_unico"
+
+    # CARGAR PARTIDA DE LA BASE DE DATOS SI EXISTE
+    if session_id not in DB_ESTADOS:
+        DB_ESTADOS[session_id] = {
+            "stats": {"Vida": 100, "Dinero": 50, "Mana": 30, "EXP": 0, "Dias": 30},
+            "historial": [],
+            "lore_partida": ["Pendiente de generación inicial"]
+        }
+
+    partida = DB_ESTADOS[session_id]
+    stats = partida["stats"]
+    historial = partida["historial"]
+    lore_partida_contenedor = partida["lore_partida"]
+
     # Semillas de amenazas que significan el fin de la comunidad mágica a los 30 días
     semillas_amenaza_final = [
         "El motor de transmutación del Ministerio de Magia ha sido infectado por una maldición de óxido eterno que disuelve el maná de la ciudad.",
@@ -27,8 +43,6 @@ def main(page: ft.Page):
         "El Reloj de Arena Ancestral que mantiene la barrera de invisibilidad frente a los humanos mundanos ha sido agrietado en un sabotaje interno.",
         "Un antiguo linaje de vampiros puros está comprando los nexos de sangre de las alcantarillas para desatar una plaga mística purificadora."
     ]
-    semilla_actual = random.choice(semillas_amenaza_final)
-    lore_partida_contenedor = [f"Amenaza de extinción oculta elegida: {semilla_actual}"]
 
     # OBTENER LA HORA REAL DE LA PARTIDA (Ciclo 24 horas reales)
     hora_actual_real = datetime.now().strftime("%H:%M")
@@ -61,8 +75,12 @@ def main(page: ft.Page):
             padding=14, border_radius=10, bgcolor="#111827"
         )
 
-    # Mensaje de bienvenida inicial
-    chat_view.controls.append(cargar_bloque("ia", "Pensar", f"Detrás del ruidoso tráfico humano y los carteles de neón de la ciudad moderna, late un mundo oculto regido por la magia antigua, los estatutos del Velo Secreto y los decretos del Ministerio de Hechicería. Quedan 30 días reales de estabilidad existencial antes de que un desastre irreversible arrastre este mundo al olvido.\n\n[ENTORNO REAL DEL VELO]\nHora actual del dispositivo: {hora_actual_real}.\nEstado del entorno: {estado_dia_noche}.\n\nEste es un mundo abierto repleto de misterios, reliquias, tabernas mágicas escondidas y peligros. Si rechazas un camino, la historia avanzará por su cuenta sin esperarte. Elige tu arquetipo maldito: Mago Urbano, Detective, Cazador o Humano Despierto."))
+    # Reconstruir el chat desde la base de datos si ya había mensajes guardados
+    if not historial:
+        chat_view.controls.append(cargar_bloque("ia", "Pensar", f"Detrás del ruidoso tráfico humano y los carteles de neón de la ciudad moderna, late un mundo oculto regido por la magia antigua, los estatutos del Velo Secreto y los decretos del Ministerio de Hechicería. Quedan 30 días reales de estabilidad existencial antes de que un desastre irreversible arrastre este mundo al olvido.\n\n[ENTORNO REAL DEL VELO]\nHora actual del dispositivo: {hora_actual_real}.\nEstado del entorno: {estado_dia_noche}.\n\nEste es un mundo abierto repleto de misterios, reliquias, tabernas mágicas escondidas y peligros. Si rechazas un camino, la historia avanzará por su cuenta sin esperarte. Elige tu arquetipo maldito: Mago Urbano, Detective, Cazador o Humano Despierto."))
+    else:
+        for msg in historial:
+            chat_view.controls.append(cargar_bloque(msg["rol"], msg.get("modo", "Pensar"), msg["texto"]))
     # 5. Controles inferiores
     modo_radio = ft.RadioGroup(content=ft.Row([ft.Radio(value="Pensar", label="Narrar/Pensar"), ft.Radio(value="Hablar", label="Hablar")], alignment=ft.MainAxisAlignment.CENTER))
     modo_radio.value = "Pensar"
@@ -84,26 +102,23 @@ def main(page: ft.Page):
         es_noche_envio = 20 <= datetime.now().hour or datetime.now().hour <= 6
 
         prompt_sistema = f"""
-        Actúa como el Game Master de un RPG conversacional de Fantasía Urbana Contemporánea (estilo el mundo oculto tras la sociedad de Harry Potter, Percy Jackson o Cazadores de Sombras, pero con una identidad totalmente original, madura y detallada). Tu estilo debe ser denso, literario, inmersivo, descriptivo y centrado en la magia.
+        Actúa como el Game Master de un RPG conversacional de Fantasía Urbana Contemporánea. Tu estilo debe ser denso, literario, inmersivo, descriptivo y centrado en la magia.
         [REGLAS DEL MUNDO MÁGICO OCULTO]
-        - Todo el lore debe centrarse exclusivamente en la magia: hechizos, pociones, varitas, tiendas ocultas tras fachadas humanas, ministerios mágicos burocráticos y linajes antiguos. 
-        - Hay peligros constantes (fugas de criaturas, maldiciones antiguas, magos renegados corruptos, patrullas del ministerio). El entorno es reactivo.
+        - Todo el lore debe centrarse exclusivamente en la magia: hechizos, pociones, varitas, tiendas ocultas tras fachadas humanas.
+        - Hay peligros constantes. El entorno es reactivo.
         [MECÁNICA ADICTIVA: RITMO DE APOCALIPSIS VARIABLE]
         - El peligro cataclísmico inminente que destruirá el mundo al llegar el día 0 es exactamente este: '{lore_partida_contenedor}'.
-        - REGLA DE RITMO EN ESTA PARTIDA: Decide de forma invisible mediante la IA si revelar este peligro inmediatamente o no. 
-        - OPCIÓN 1: Muéstralo abiertamente desde el principio en tu respuesta si el jugador toma una acción relevante.
-        - OPCIÓN 2: Mantén la ciudad en una aparente 'normalidad mágica ordinaria'. Comienza a formar el problema poco a poco de fondo. Deja caer pistas sutiles en los primeros turnos (rumores lejanos, noticias raras en los diarios mágicos, nerviosismo en las tiendas de varitas). Tras 3 o 4 mensajes del jugador, empieza a informarle formalmente de la magnitud de la amenaza que se le viene encima.
+        - REGLA DE RITMO EN ESTA PARTIDA: Decide si revelar este peligro inmediatamente o no según la situación.
         [TIEMPO REAL DE 24 HORAS Y UBICACIÓN]
         - La hora real en el mundo del jugador es exactamente las {hora_envio}. 
-        - Si es de NOCHE ({es_noche_envio}), los peligros se vuelven más físicos y agresivos en las calles. Si es de DÍA, la comunidad mágica actúa con extrema cautela para no ser descubierta por los humanos ordinarios (muggles/mundanos).
-        - El peligro y las misiones secundarias cambian drásticamente según la UBICACIÓN. Introduce constantemente tanto peligros de la trama principal como amenazas o encuentros SECUNDARIOS COMPLETAMENTE ALEATORIOS (comerciantes excéntricos, duendes ladrones, duelos de varitas callejeros).
+        - El peligro cambia drásticamente según la UBICACIÓN. Introduce tanto peligros de la trama principal como amenazas o encuentros SECUNDARIOS COMPLETAMENTE ALEATORIOS.
         [REGLA DE MUNDO ABIERTO REAL]
-        El jugador tiene libre albedrío total. Si decide ignorar la amenaza, rechazar misiones o irse a una taberna mística a pasar de todo, ACEPTA su decisión de inmediato. No le insistas ni le obligues a volver. Describe cómo la conspiración apocalíptica oculta avanza por su cuenta de fondo, restando o sumando días en el marcador según el caos generado.
+        El jugador tiene libre albedrío total. Si decide ignorar la amenaza, rechazar misiones o irse a una taberna mística a pasar de todo, ACEPTA su decisión de inmediato.
         Datos actuales del jugador: Vida={stats['Vida']}, Dinero={stats['Dinero']}, Mana={stats['Mana']}. Días restantes: {stats['Dias']}.
-        Modo actual: '{mod}'. Reacciona diferente si piensa o habla en voz alta.
+        Modo actual: '{mod}'.
         AL FINAL ABSOLUTO de tu mensaje, incluye estrictamente estos dos bloques en este formato exacto:
         1. [CAMBIOS: Vida=X, Dinero=X, Mana=X, EXP=X, Dias=X] (O [CAMBIOS: Ninguno]).
-        2. [MEMORIA: "Resumen corto de la trama, sospechosos descubiertos o situación actual"].
+        2. [MEMORIA: "Resumen corto de la trama o situación actual"].
         """
 
         mensajes = [{"role": "system", "content": prompt_sistema}]
@@ -111,7 +126,6 @@ def main(page: ft.Page):
             mensajes.append({"role": "user" if msg["rol"] == "usuario" else "assistant", "content": msg["texto"]})
 
         completion = client.chat.completions.create(model="llama-3.3-70b-versatile", messages=mensajes)
-        # CORRECCIÓN EN EL ÍNDICE DE GROQ PARA DETENER EL ERROR DE LISTA:
         res = completion.choices[0].message.content
 
         if "[MEMORIA:" in res:
@@ -136,6 +150,13 @@ def main(page: ft.Page):
         chat_view.controls.append(cargar_bloque("ia", "Pensar", res))
         historial.append({"rol": "ia", "texto": res})
         
+        # GUARDAR LOS DATOS ACTUALIZADOS EN LA BASE DE DATOS DEL SERVIDOR
+        DB_ESTADOS[session_id] = {
+            "stats": stats,
+            "historial": historial,
+            "lore_partida": lore_partida_contenedor
+        }
+
         reloj_label.value = f"⏳ RELOJ DE LA CRISIS: Quedan {stats['Dias']} días para el fin del Velo"
         hora_label.value = f"⏰ Tiempo Real: {datetime.now().strftime('%H:%M')} | {'🌌 TOQUE DE QUEDA' if (20 <= datetime.now().hour or datetime.now().hour <= 6) else '☀️ BAJO EL VELO'}"
         stats_text.value = f"❤️ {stats['Vida']}%  |  💰 {stats['Dinero']}€  |  🔮 {stats['Mana']}/30  |  ✨ {stats['EXP']}%"
@@ -151,6 +172,12 @@ def main(page: ft.Page):
         historial.clear()
         nueva_semilla = random.choice(semillas_amenaza_final)
         lore_partida_contenedor = [f"Amenaza de extinción oculta elegida: {nueva_semilla}"]
+        
+        DB_ESTADOS[session_id] = {
+            "stats": stats,
+            "historial": historial,
+            "lore_partida": lore_partida_contenedor
+        }
         
         chat_view.controls.clear()
         chat_view.controls.append(cargar_bloque("ia", "Pensar", f"Detrás del ruidoso tráfico humano y los carteles de neón de la ciudad moderna, late un mundo oculto regido por la magia antigua, los estatutos del Velo Secreto y los decretos del Ministerio de Hechicería. Quedan 30 días reales de estabilidad existencial antes de que un desastre irreversible arrastre este mundo al olvido.\n\n[ENTORNO REAL DEL VELO]\nHora actual del dispositivo: {datetime.now().strftime('%H:%M')}.\nEstado del entorno: {'🌌 TOQUE DE QUEDA' if (20 <= datetime.now().hour or datetime.now().hour <= 6) else '☀️ BAJO EL VELO'}.\n\nEste es un mundo abierto repleto de misterios, reliquias, tabernas mágicas escondidas y peligros. Si rechazas un camino, la historia avanzará por su cuenta sin esperarte. Elige tu arquetipo maldito: Mago Urbano, Detective, Cazador o Humano Despierto."))
