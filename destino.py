@@ -26,7 +26,7 @@ def main(page: ft.Page):
 
     # Catálogo de amenazas límite para los 30 días reales
     semillas_amenaza_final = [
-        "El motor de transmutación del Ministerio de Magia ha sido infected por una maldición de óxido eterno que disuelve el maná de la ciudad.",
+        "El motor de transmutación del Ministerio de Magia ha sido infectado por una maldición de óxido eterno que disuelve el maná de la ciudad.",
         "Una secta de licántropos y magos oscuros está preparando el despertar de un dragón mitológico sepultado bajo los cimientos urbanos.",
         "Un brote de 'estática mística' se está filtrando a través de la red eléctrica, borrando los recuerdos de los hechiceros y exponiendo el velo.",
         "El Reloj de Arena Ancestral que mantiene la barrera de invisibilidad frente a los humanos mundanos ha sido agrietado en un sabotaje interno.",
@@ -131,7 +131,8 @@ def main(page: ft.Page):
             mensajes.append({"role": "user" if msg["rol"] == "usuario" else "assistant", "content": msg["texto"]})
 
         completion = client.chat.completions.create(model="llama-3.3-70b-versatile", messages=mensajes)
-        res = completion.choices.message.content
+        # SOLUCIÓN DE ÍNDICE INDESTRUCTIBLE APLICADA AQUÍ:
+        res = completion.choices[0].message.content
 
         if "[MEMORIA:" in res:
             p_lore = res.split("[MEMORIA:")
@@ -165,7 +166,6 @@ def main(page: ft.Page):
         historial.append({"rol": "ia", "texto": res})
         
         reloj_label.value = f"⏳ RELOJ DE LA CRISIS: Quedan {stats['Dias']} días para el fin del Velo"
-        # CORRECCIÓN DE LA COMILLA HORARIA EN ESTA LÍNEA:
         hora_label.value = f"⏰ Tiempo Real: {datetime.now().strftime('%H:%M')} | {'🌌 TOQUE DE QUEDA' if (20 <= datetime.now().hour or datetime.now().hour <= 6) else '☀️ BAJO EL VELO'}"
         stats_text.value = f"❤️ {stats['Vida']}%  |  💰 {stats['Dinero']}€  |  🔮 {stats['Mana']}/30  |  ✨ {stats['EXP']}%"
         page.update()
