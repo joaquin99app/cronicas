@@ -112,7 +112,7 @@ def main(page: ft.Page):
         - Si el jugador compra un objeto, ponle un precio lógico detallado en el diálogo (ej: una Poción de Maná cuesta 15€, una Varita Rúnica nueva cuesta 45€).
         
         [RITMO DE APOCALIPSIS VARIABLE]
-        La gran amenaza final que destruirá el Velo a los 30 días es: '{lore_partida_contenedor}'. Decide si revelar este peligro inmediatamente o no según la situación.
+        La gran amenaza final que destruirá el Velo a los 30 días es: '{str(lore_partida_contenedor)}'. Decide si revelar este peligro inmediatamente o no según la situación.
         
         [MUNDO ABIERTO Y CICLO HORARIO]
         La hora real es exactamente las {hora_envio}. Si es de noche ({es_noche_envio}), los mercados negros abren y las criaturas de los callejones son letales. Si el jugador ignora una tienda o rechaza una misión, acéptalo de inmediato y narra cómo el mundo sigue girando sin él.
@@ -131,19 +131,24 @@ def main(page: ft.Page):
             mensajes.append({"role": "user" if msg["rol"] == "usuario" else "assistant", "content": msg["texto"]})
 
         completion = client.chat.completions.create(model="llama-3.3-70b-versatile", messages=mensajes)
-        # SOLUCIÓN DE ÍNDICE INDESTRUCTIBLE APLICADA AQUÍ:
-        res = completion.choices[0].message.content
+        raw_res = str(completion.choices[0].message.content)
 
-        if "[MEMORIA:" in res:
-            p_lore = res.split("[MEMORIA:")
-            res = p_lore
-            lore_partida_contenedor = [p_lore.replace("]", "").replace('"', '').strip()]
+        # SOLUCIÓN CRÍTICA: Procesamos los bloques de texto trabajando sobre strings puros, nunca listas
+        res_narrador = raw_res
+        
+        if "[MEMORIA:" in raw_res:
+            partes_lore = raw_res.split("[MEMORIA:")
+            res_narrador = partes_lore[0]
+            contenido_lore = partes_lore[1].replace("]", "").replace('"', '').strip()
+            lore_partida_contenedor = [contenido_lore]
 
-        # PROCESADOR SEGURO DE ASIGNACIÓN FIJA DE MARCADORES ECONOMÍA
-        if "[ESTADÍSTICAS:" in res:
-            p_cambios = res.split("[ESTADÍSTICAS:")
-            cambios_str = p_cambios.replace("]", "").strip()
-            res = p_cambios
+        if "[ESTADÍSTICAS:" in raw_res:
+            partes_cambios = raw_res.split("[ESTADÍSTICAS:")
+            # Aseguramos no arrastrar marcas de bloques en el mensaje final
+            if "[MEMORIA:" not in partes_cambios[0]:
+                res_narrador = partes_cambios[0]
+            
+            cambios_str = partes_cambios[1].split("]")[0].strip()
             for cambio in cambios_str.split(","):
                 try:
                     clave, valor = cambio.split("=")
@@ -155,15 +160,15 @@ def main(page: ft.Page):
                         stats[k] = v
                 except: pass
 
-        # Guardar estado actualizado en el diccionario seguro de Python
+        # Guardar estado actualizado en la base de datos de Python
         SERVIDOR_PARTIDAS[id_id] = {
             "stats": stats,
             "historial": historial,
             "lore": lore_partida_contenedor
         }
 
-        chat_view.controls.append(cargar_bloque("ia", "Pensar", res))
-        historial.append({"rol": "ia", "texto": res})
+        chat_view.controls.append(cargar_bloque("ia", "Pensar", res_narrador.strip()))
+        historial.append({"rol": "ia", "texto": res_narrador.strip()})
         
         reloj_label.value = f"⏳ RELOJ DE LA CRISIS: Quedan {stats['Dias']} días para el fin del Velo"
         hora_label.value = f"⏰ Tiempo Real: {datetime.now().strftime('%H:%M')} | {'🌌 TOQUE DE QUEDA' if (20 <= datetime.now().hour or datetime.now().hour <= 6) else '☀️ BAJO EL VELO'}"
