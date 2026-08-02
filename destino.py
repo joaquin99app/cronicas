@@ -89,7 +89,7 @@ def main(page: ft.Page):
         chat_view.controls.append(cargar_bloque("ia", "Pensar", f"Detrás del ruidoso tráfico humano y los carteles de neón de la ciudad moderna, late un mundo oculto regido por la magia antigua, los estatutos del Velo Secreto y los decretos del Ministerio de Hechicería. Quedan 30 días reales antes de que la crisis actual rompa el equilibrio.\n\n[SITUACIÓN ECONÓMICA Y ENTORNO]\nHora actual: {hora_actual_real} ({estado_dia_noche}).\nTienes {stats['Dinero']}€ mágicos en tu monedero de cuero. Los callejones invisibles albergan mercados negros, armerías de varitas y boticarios clandestinos. Todo tiene un precio.\n\nSISTEMA DE RECUPERACIÓN: Si tenías una partida anterior, escribe tu PIN numérico de 3 cifras abajo en la barra y dale a enviar para recuperar tus mensajes e inventario. Si eres nuevo, escribe tu arquetipo para empezar: Mago Urbano, Detective, Cazador o Humano Despierto."))
     
     pintar_bienvenida()
-        # 5. Controles inferiores
+    # 5. Controles inferiores
     modo_radio = ft.RadioGroup(content=ft.Row([ft.Radio(value="Pensar", label="Narrar/Pensar"), ft.Radio(value="Hablar", label="Hablar")], alignment=ft.MainAxisAlignment.CENTER))
     modo_radio.value = "Pensar"
     input_texto = ft.TextField(hint_text="¿Qué dirección toma tu voluntad? (O pon tu PIN para cargar)", bgcolor="#111827", border_color="#1E293B", expand=True)
@@ -166,38 +166,47 @@ def main(page: ft.Page):
             mensajes_api.append({"role": rol_api, "content": msg.get("texto", "")})
 
         completion = client.chat.completions.create(model="llama-3.3-70b-versatile", messages=mensajes_api)
-        # CORRECCIÓN DE LA VARIABLE DE EXTRACCIÓN DE LA API DE GROQ:
         raw_res = str(completion.choices[0].message.content)
         res_narrador = raw_res
-                if "[MEMORIA:" in raw_res:
-            partes_lore = raw_res.split("[MEMORIA:")
-            res_narrador = partes_lore[0]
-            contenido_lore = partes_lore[1].replace("]", "").replace('"', '').strip()
-            lore_partida_contenedor = [contenido_lore]
+                # PROCESADOR SEGURO DE STRINGS PUROS (Inmune a fallos de listas)
+        if "[MEMORIA:" in raw_res:
+            try:
+                idx_ini = raw_res.index("[MEMORIA:")
+                idx_fin = raw_res.index("]", idx_ini)
+                contenido_lore = raw_res[idx_ini + 9:idx_fin].replace('"', '').strip()
+                lore_partida_contenedor = [contenido_lore]
+                res_narrador = raw_res[:idx_ini].strip()
+            except: pass
 
         if "[MOCHILA:" in raw_res:
-            partes_inv = raw_res.split("[MOCHILA:")
-            if "[MEMORIA:" not in partes_inv:
-                res_narrador = partes_inv[0]
-            contenido_inv = partes_inv[1].split("]")[0].strip()
-            inventario_contenedor = [contenido_inv]
+            try:
+                idx_ini = raw_res.index("[MOCHILA:")
+                idx_fin = raw_res.index("]", idx_ini)
+                contenido_inv = raw_res[idx_ini + 9:idx_fin].strip()
+                inventario_contenedor = [contenido_inv]
+                if idx_ini < len(res_narrador):
+                    res_narrador = raw_res[:idx_ini].strip()
+            except: pass
 
         if "[ESTADÍSTICAS:" in raw_res:
-            partes_cambios = raw_res.split("[ESTADÍSTICAS:")
-            if "[MOCHILA:" not in partes_cambios and "[MEMORIA:" not in partes_cambios:
-                res_narrador = partes_cambios[0]
-            
-            cambios_str = partes_cambios[1].split("]")[0].strip()
-            for cambio in cambios_str.split(","):
-                try:
-                    clave, valor = cambio.split("=")
-                    k = clave.strip()
-                    v = int(valor.strip())
-                    if k in stats:
-                        if k == "Vida" and v > 100: v = 100
-                        if k == "Mana" and v > 30: v = 30
-                        stats[k] = v
-                except: pass
+            try:
+                idx_ini = raw_res.index("[ESTADÍSTICAS:")
+                idx_fin = raw_res.index("]", idx_ini)
+                cambios_str = raw_res[idx_ini + 14:idx_fin].strip()
+                if idx_ini < len(res_narrador):
+                    res_narrador = raw_res[:idx_ini].strip()
+                
+                for cambio in cambios_str.split(","):
+                    try:
+                        clave, valor = cambio.split("=")
+                        k = clave.strip()
+                        v = int(valor.strip())
+                        if k in stats:
+                            if k == "Vida" and v > 100: v = 100
+                            if k == "Mana" and v > 30: v = 30
+                            stats[k] = v
+                    except: pass
+            except: pass
 
         chat_view.controls.append(cargar_bloque("ia", "Pensar", res_narrador.strip()))
         historial.append({"rol": "ia", "texto": res_narrador.strip()})
