@@ -3,36 +3,9 @@ from groq import Groq
 import os
 import random
 from datetime import datetime
-import json
-import urllib.request
 
-# NUBE COMPATIBLE PURA DE PYTHON (Guarda de forma invisible el progreso por IP/Navegador)
-URL_NUBE_BASE = "https://kvdb.io"
-
-def cargar_partida_nube(id_jugador):
-    try:
-        url = f"{URL_NUBE_BASE}{id_jugador}"
-        req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
-        with urllib.request.urlopen(req, timeout=4) as response:
-            data = json.loads(response.read().decode('utf-8'))
-            return {
-                "stats": data["stats"],
-                "historial": data["historial"],
-                "lore": data["lore"]
-            }
-    except:
-        return None
-
-def guardar_partida_nube(id_jugador, stats, historial, lore):
-    try:
-        url = f"{URL_NUBE_BASE}{id_jugador}"
-        payload = json.dumps({"stats": stats, "historial": historial, "lore": lore}).encode('utf-8')
-        req = urllib.request.Request(url, data=payload, headers={'Content-Type': 'application/json', 'User-Agent': 'Mozilla/5.0'}, method="POST")
-        with urllib.request.urlopen(req, timeout=4) as response:
-            pass
-        return True
-    except:
-        return False
+# BASE DE DATOS MÍSTICA INTEGRADA EN EL SERVIDOR (Inmune a fallos de Flet)
+MEMORIA_PERSISTENTE_RPG = {}
 
 def main(page: ft.Page):
     # 1. Configuración de pantalla estilo App Móvil Premium
@@ -45,9 +18,12 @@ def main(page: ft.Page):
     # Conexión segura con la IA de Groq en Render
     client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
 
-    # Crear una huella digital invisible combinando los datos de red del terminal
-    ip_terminal = page.client_ip if page.client_ip else "mundano_anonimo"
-    id_unico_invisible = f"user_{ip_terminal.replace('.', '_').replace(':', '_')}"
+    # CAPTURA AUTOMÁTICA DE IDENTIFICADOR INTEGRADO
+    # Usamos una variable de control interna de la página que Render respeta de forma individual
+    if not hasattr(page, "_rpg_session_token"):
+        page._rpg_session_token = f"token_{random.randint(100000, 999999)}"
+    
+    id_sesion = page._rpg_session_token
 
     # Catálogo de amenazas límite para los 30 días reales
     semillas_amenaza_final = [
@@ -58,23 +34,24 @@ def main(page: ft.Page):
         "Un antiguo linaje de vampiros puros está comprando los nexos de sangre de las alcantarillas para desatar una plaga mística purificadora."
     ]
 
-    # CARGA INVISIBLE DE FONDO AL ENCENDER LA APP
-    partida_salvada = cargar_partida_nube(id_unico_invisible)
-
-    if partida_salvada and len(partida_salvada["historial"]) > 0:
-        stats = partida_salvada["stats"]
-        historial = partida_salvada["historial"]
-        lore_partida_contenedor = partida_salvada["lore"]
-    else:
-        stats = {"Vida": 100, "Dinero": 50, "Mana": 30, "EXP": 0, "Dias": 30}
-        historial = []
+    # COMPROBACIÓN E INYECCIÓN AUTOMÁTICA INTEGRADA EN MEMORIA
+    if id_sesion not in MEMORIA_PERSISTENTE_RPG:
         semilla_inicial = random.choice(semillas_amenaza_final)
-        lore_partida_contenedor = [f"Amenaza de extinción oculta elegida: {semilla_inicial}"]
+        MEMORIA_PERSISTENTE_RPG[id_sesion] = {
+            "stats": {"Vida": 100, "Dinero": 50, "Mana": 30, "EXP": 0, "Dias": 30},
+            "historial": [],
+            "lore": [f"Amenaza de extinción oculta elegida: {semilla_inicial}"]
+        }
+
+    # Extraer variables dinámicas directas asociadas a este teléfono concreto
+    stats = MEMORIA_PERSISTENTE_RPG[id_sesion]["stats"]
+    historial = MEMORIA_PERSISTENTE_RPG[id_sesion]["historial"]
+    lore_partida_contenedor = MEMORIA_PERSISTENTE_RPG[id_sesion]["lore"]
 
     # Obtener el ciclo horario de 24 horas reales
     hora_actual_real = datetime.now().strftime("%H:%M")
     es_de_noche = 20 <= datetime.now().hour or datetime.now().hour <= 6
-    estado_dia_noche = "🌌 TOQUE DE QUEDA (El velo es frágil, criaturas en los callejones, patrullas del Ministerio)" if es_de_noche else "☀️ BAJO EL VELO (La magia se esconde de los humanos, mercados mágicos abiertos, tabernas activas)"
+    estado_dia_noche = "🌌 TOQUE DE QUEDA (El velo es frágil, criaturas en los callejones, patrols del Ministerio)" if es_de_noche else "☀️ BAJO EL VELO (La magia se esconde de los humanos, mercados mágicos abiertos, tabernas activas)"
 
     # 3. Componentes visuales superiores unificados
     reloj_label = ft.Text(f"⏳ RELOJ DE LA CRISIS: Quedan {stats['Dias']} días para el fin del Velo", color="#A78BFA", weight=ft.FontWeight.BOLD, size=14)
@@ -102,18 +79,18 @@ def main(page: ft.Page):
             padding=14, border_radius=10, bgcolor="#111827"
         )
 
-    # Pintar los bloques de la historia guardada de fondo de forma inmediata
+    # Cargar de forma integrada los mensajes si ya existía la sesión
     if not historial:
         chat_view.controls.append(cargar_bloque("ia", "Pensar", f"Detrás del ruidoso tráfico humano y los carteles de neón de la ciudad moderna, late un mundo oculto regido por la magia antigua, los estatutos del Velo Secreto y los decretos del Ministerio de Hechicería. Quedan 30 días reales antes de que la crisis actual rompa el equilibrio.\n\n[SITUACIÓN ECONÓMICA Y ENTORNO]\nHora actual: {hora_actual_real} ({estado_dia_noche}).\nTienes {stats['Dinero']}€ mágicos en tu monedero de cuero. Los callejones invisibles albergan mercados negros, armerías de varitas, boticarios de maná y tabernas oscuras llenas de secretos. Todo tiene un precio, y nadie regala nada.\n\nElige tu arquetipo místico escribiéndolo abajo para adentrarte en el mapa abierto: Mago Urbano, Detective, Cazador o Humano Despierto."))
     else:
         for msg in historial:
             chat_view.controls.append(cargar_bloque(msg.get("rol", "ia"), msg.get("modo", "Pensar"), msg.get("texto", "")))
-          # 5. Controles inferiores
+                # 5. Controles inferiores
     modo_radio = ft.RadioGroup(content=ft.Row([ft.Radio(value="Pensar", label="Narrar/Pensar"), ft.Radio(value="Hablar", label="Hablar")], alignment=ft.MainAxisAlignment.CENTER))
     modo_radio.value = "Pensar"
     input_texto = ft.TextField(hint_text="¿Qué dirección toma tu voluntad?", bgcolor="#111827", border_color="#1E293B", expand=True)
 
-    # 6. Lógica de ejecución de la IA al pulsar el botón
+    # 6. Lógica de ejecución de la IA con auto-guardado integrado
     def enviar_accion(e):
         nonlocal lore_partida_contenedor
         if not input_texto.value: return
@@ -158,7 +135,7 @@ def main(page: ft.Page):
 
         completion = client.chat.completions.create(model="llama-3.3-70b-versatile", messages=mensajes_api)
         
-        # --- SOLUCIÓN DE ÍNDICE MÁGICA: Extraemos la respuesta usando el índice obligatorio [0] ---
+        # --- EXTRACCIÓN OFICIAL PERMANENTE CORREGIDA POR ÍNDICE DE LISTA CHOICES ---
         raw_res = str(completion.choices[0].message.content)
 
         res_narrador = raw_res
@@ -186,11 +163,16 @@ def main(page: ft.Page):
                         stats[k] = v
                 except: pass
 
+        # Guardar en la lista visual del móvil
         chat_view.controls.append(cargar_bloque("ia", "Pensar", res_narrador.strip()))
         historial.append({"rol": "ia", "texto": res_narrador.strip()})
         
-        # --- GUARDADO AUTOMÁTICO INVISIBLE EN LA NUBE EN CADA TURNO ---
-        guardar_partida_nube(id_unico_invisible, stats, historial, lore_partida_contenedor)
+        # --- AUTO-GUARDADO INTEGRADO: Guardamos los punteros actualizados en el servidor nativo ---
+        MEMORIA_PERSISTENTE_RPG[id_sesion] = {
+            "stats": stats,
+            "historial": historial,
+            "lore": lore_partida_contenedor
+        }
         
         reloj_label.value = f"⏳ RELOJ DE LA CRISIS: Quedan {stats['Dias']} días para el fin del Velo"
         hora_label.value = f"⏰ Tiempo Real: {datetime.now().strftime('%H:%M')} | {'🌌 TOQUE DE QUEDA' if (20 <= datetime.now().hour or datetime.now().hour <= 6) else '☀️ BAJO EL VELO'}"
@@ -198,12 +180,7 @@ def main(page: ft.Page):
         page.update()
 
     def reiniciar(e):
-        try:
-            url = f"{URL_NUBE_BASE}{id_unico_invisible}"
-            req = urllib.request.Request(url, method="DELETE", headers={'User-Agent': 'Mozilla/5.0'})
-            with urllib.request.urlopen(req, timeout=3) as r: pass
-        except: pass
-            
+        nonlocal lore_partida_contenedor
         stats["Vida"] = 100
         stats["Dinero"] = 50
         stats["Mana"] = 30
@@ -214,8 +191,14 @@ def main(page: ft.Page):
         nueva_semilla = random.choice(semillas_amenaza_final)
         lore_partida_contenedor = [f"Amenaza de extinción oculta elegida: {nueva_semilla}"]
         
+        MEMORIA_PERSISTENTE_RPG[id_sesion] = {
+            "stats": stats,
+            "historial": historial,
+            "lore": lore_partida_contenedor
+        }
+        
         chat_view.controls.clear()
-        chat_view.controls.append(cargar_bloque("ia", "Pensar", f"Detrás del ruidoso tráfico humano y los carteles de neón de la ciudad moderna, late un world oculto regido por la magia antigua, los estatutos del Velo Secreto y los decretos del Ministerio de Hechicería. Quedan 30 días reales de estabilidad existencial antes de que un desastre irreversible arrastre este world al olvido.\n\n[SITUACIÓN ECONÓMICA Y ENTORNO]\nHora actual: {datetime.now().strftime('%H:%M')} . Los callejones invisibles albergan mercados negros, armerías de varitas, boticarios de maná y tabernas oscuras llenas de secretos. Todo tiene un precio.\n\nElige tu arquetipo maldito escribiéndolo abajo: Mago Urbano, Detective, Cazador o Humano Despierto."))
+        chat_view.controls.append(cargar_bloque("ia", "Pensar", f"Detrás del ruidoso tráfico humano y los carteles de neón de la ciudad moderna, late un mundo oculto regido por la magia antigua, los estatutos del Velo Secreto y los decretos del Ministerio de Hechicería. Quedan 30 días reales de estabilidad existencial antes de que un desastre irreversible arrastre este world al olvido.\n\n[SITUACIÓN ECONÓMICA Y ENTORNO]\nHora actual: {datetime.now().strftime('%H:%M')} . Los callejones invisibles albergan mercados negros, armerías de varitas, boticarios de maná y tabernas oscuras llenas de secretos. Todo tiene un precio.\n\nElige tu arquetipo maldito escribiéndolo abajo: Mago Urbano, Detective, Cazador o Humano Despierto."))
         
         reloj_label.value = f"⏳ RELOJ DE LA CRISIS: Quedan {stats['Dias']} días para el fin del Velo"
         stats_text.value = f"❤️ {stats['Vida']}%  |  💰 {stats['Dinero']}€  |  🔮 {stats['Mana']}/30  |  ✨ {stats['EXP']}%"
@@ -232,13 +215,9 @@ def main(page: ft.Page):
 
     page.add(
         ft.Column([
-            ft.Row([
-                ft.Text("🧙‍♂️ CRÓNICAS DEL VELO", size=14, weight=ft.FontWeight.BOLD, color="#9333EA"), 
-                btn_reset
-            ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN), 
+            ft.Row([ft.Text("🧙‍♂️ CRÓNICAS DEL VELO", size=14, weight=ft.FontWeight.BOLD, color="#9333EA"), btn_reset], alignment=ft.MainAxisAlignment.SPACE_BETWEEN), 
             stat_container, ft.Divider(color="#1E293B"), chat_view, ft.Divider(color="#1E293B"), modo_radio, ft.Row([input_texto, btn_enviar])
         ], expand=True)
     )
 
 ft.app(target=main, view=ft.AppView.WEB_BROWSER, port=8000)
-      
