@@ -85,7 +85,7 @@ def main(page: ft.Page):
 
     def pintar_bienvenida():
         chat_view.controls.clear()
-        chat_view.controls.append(cargar_bloque("ia", "Pensar", f"Detrás del ruidoso tráfico humano y los carteles de neón de la ciudad moderna, late un world oculto regido por la magia antigua, los estatutos del Velo Secreto y los decretos del Ministerio de Hechicería.\n\n📧 [SISTEMA DE GRIMORIO POR CORREO]:\nEscribe tu dirección de correo electrónico abajo en la barra de texto y dale a enviar para iniciar tu andadura o recuperar tu progreso guardado en el servidor:"))
+        chat_view.controls.append(cargar_bloque("ia", "Pensar", f"Detrás del ruidoso tráfico humano y los carteles de neón de la ciudad moderna, late un mundo oculto regido por la magia antigua, los estatutos del Velo Secreto y los decretos del Ministerio de Hechicería.\n\n📧 [SISTEMA DE GRIMORIO POR CORREO]:\nEscribe tu dirección de correo electrónico abajo en la barra de texto y dale a enviar para iniciar tu andadura o recuperar tu progreso guardado en el servidor:"))
     
     pintar_bienvenida()
         # 5. Controles inferiores
@@ -172,7 +172,7 @@ def main(page: ft.Page):
         completion = client.chat.completions.create(model="llama-3.3-70b-versatile", messages=mensajes_api)
         raw_res = str(completion.choices[0].message.content)
         res_narrador = raw_res
-            if "[MEMORIA:" in raw_res:
+                if "[MEMORIA:" in raw_res:
             try:
                 idx_ini = raw_res.index("[MEMORIA:")
                 idx_fin = raw_res.index("]", idx_ini)
@@ -263,4 +263,3 @@ def main(page: ft.Page):
     page.add(ft.Column([ft.Row([ft.Text("🧙‍♂️ CRÓNICAS DEL VELO", size=14, weight=ft.FontWeight.BOLD, color="#9333EA"), ft.Row([btn_save, btn_reset], spacing=5)], alignment=ft.MainAxisAlignment.SPACE_BETWEEN), stat_container, ft.Divider(color="#1E293B"), chat_view, ft.Divider(color="#1E293B"), modo_radio, ft.Row([input_texto, btn_enviar])], expand=True))
 
 ft.app(target=main, view=ft.AppView.WEB_BROWSER, port=8000)
-        
