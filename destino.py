@@ -40,7 +40,7 @@ def main(page: ft.Page):
     
     semillas_amenaza_final = [
         "El motor de transmutación del Ministerio de Magia ha sido infectado por una maldición de óxido eterno que disuelve el maná de la ciudad.",
-        "Una secta de licántropos y magos oscuros está preparando el despertar de un dragón mitológico sepultado bajo los cimientos urbanos.",
+        "Una secta de licántropos y magos oscuros está preparando el despertar de un dragon mitológico sepultado bajo los cimientos urbanos.",
         "Un brote de 'estática mística' se está filtrando a través de la red eléctrica, borrando los recuerdos de los hechiceros y exponiendo el velo.",
         "El Reloj de Arena Ancestral que mantiene la barrera de invisibilidad frente a los humanos mundanos ha sido agrietado en un sabotaje interno.",
         "Un antiguo linaje de vampiros puros está comprando los nexos de sangre de las alcantarillas para desatar una plaga mística purificadora."
@@ -96,6 +96,7 @@ def main(page: ft.Page):
 
     # 6. Lógica de ejecución de la IA al pulsar el botón
     def enviar_accion(e):
+        # DECLARACIÓN INTEGRADA NONLOCAL DE CONTROL DE VARIABLES:
         nonlocal lore_partida_contenedor, stats, historial, inventario_contenedor
         if not input_texto.value: return
         txt = input_texto.value.strip()
@@ -166,7 +167,7 @@ def main(page: ft.Page):
             mensajes_api.append({"role": rol_api, "content": msg.get("texto", "")})
 
         completion = client.chat.completions.create(model="llama-3.3-70b-versatile", messages=mensajes_api)
-        raw_res = str(completion.choices[0].message.content)
+        raw_res = str(completion.choices[message].content) if isinstance(completion.choices, list) else str(completion.choices[0].message.content)
         res_narrador = raw_res
                 if "[MEMORIA:" in raw_res:
             partes_lore = raw_res.split("[MEMORIA:")
@@ -176,14 +177,14 @@ def main(page: ft.Page):
 
         if "[MOCHILA:" in raw_res:
             partes_inv = raw_res.split("[MOCHILA:")
-            if "[MEMORIA:" not in partes_inv:
+            if "[MEMORIA:" not in partes_inv[0]:
                 res_narrador = partes_inv[0]
             contenido_inv = partes_inv[1].split("]")[0].strip()
             inventario_contenedor = [contenido_inv]
 
         if "[ESTADÍSTICAS:" in raw_res:
             partes_cambios = raw_res.split("[ESTADÍSTICAS:")
-            if "[MOCHILA:" not in partes_cambios and "[MEMORIA:" not in partes_cambios:
+            if "[MOCHILA:" not in partes_cambios[0] and "[MEMORIA:" not in partes_cambios[0]:
                 res_narrador = partes_cambios[0]
             
             cambios_str = partes_cambios[1].split("]")[0].strip()
