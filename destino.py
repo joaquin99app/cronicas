@@ -85,10 +85,10 @@ def main(page: ft.Page):
 
     def pintar_bienvenida():
         chat_view.controls.clear()
-        chat_view.controls.append(cargar_bloque("ia", "Pensar", f"Detrás del ruidoso tráfico humano y los carteles de neón de la ciudad moderna, late un mundo oculto regido por la magia antigua, los estatutos del Velo Secreto y los decretos del Ministerio de Hechicería.\n\n📧 [SISTEMA DE IDENTIFICACIÓN INTEGRADO]:\nPara poder jugar y que tus progresos no se pierdan nunca, escribe tu dirección de correo electrónico abajo en la barra de texto y dale a enviar para iniciar o recuperar tu Grimorio:"))
+        chat_view.controls.append(cargar_bloque("ia", "Pensar", f"Detrás del ruidoso tráfico humano y los carteles de neón de la ciudad moderna, late un world oculto regido por la magia antigua, los estatutos del Velo Secreto y los decretos del Ministerio de Hechicería.\n\n📧 [SISTEMA DE GRIMORIO POR CORREO]:\nEscribe tu dirección de correo electrónico abajo en la barra de texto y dale a enviar para iniciar tu andadura o recuperar tu progreso guardado en el servidor:"))
     
     pintar_bienvenida()
-                # 5. Controles inferiores
+        # 5. Controles inferiores
     modo_radio = ft.RadioGroup(content=ft.Row([ft.Radio(value="Pensar", label="Narrar/Pensar"), ft.Radio(value="Hablar", label="Hablar")], alignment=ft.MainAxisAlignment.CENTER))
     modo_radio.value = "Pensar"
     input_texto = ft.TextField(hint_text="Introduce tu correo electrónico para empezar...", bgcolor="#111827", border_color="#1E293B", expand=True)
@@ -100,7 +100,7 @@ def main(page: ft.Page):
         txt = input_texto.value.strip()
         input_texto.value = ""
         
-        # MECÁNICA DE CARGA AUTOMÁTICA DETECTANDO EL CORREO ELECTRÓNICO (Contiene arroba)
+        # MECÁNICA DE CARGA AUTOMÁTICA DETECTANDO EL CORREO ELECTRÓNICO (Contiene arroba y punto)
         if page.data["correo_usuario"] is None:
             if "@" in txt and "." in txt:
                 page.data["correo_usuario"] = txt
@@ -124,9 +124,9 @@ def main(page: ft.Page):
                     for msg in historial:
                         chat_view.controls.append(cargar_bloque(msg.get("rol", "ia"), msg.get("modo", "Pensar"), msg.get("texto", "")))
                     
-                    chat_view.controls.append(cargar_bloque("ia", "Pensar", f"🔮 Vínculo establecido con {txt}. Tu historial de mensajes, monedas y mochila se han descargado con éxito. Continúa tu aventura."))
+                    chat_view.controls.append(cargar_bloque("ia", "Pensar", f"🔮 Vínculo establecido con {txt}. Tu historial de mensajes, monedas y mochila se han restaurado con éxito. Continúa tu aventura."))
                 else:
-                    chat_view.controls.append(cargar_bloque("ia", "Pensar", f"✨ Correo {txt} registrado en el Ministerio de Magia por primera vez.\n\nTienes {stats['Dinero']}€ mágicos en tu monedero de cuero. Los callejones invisibles albergan mercados negros y boticarios oscuros. Todo tiene un precio.\n\nElige tu arquetipo místico escribiéndolo abajo para adentrarte en el mapa abierto: Mago Urbano, Detective, Cazador o Humano Despierto."))
+                    chat_view.controls.append(cargar_bloque("ia", "Pensar", f"✨ Correo {txt} registrado correctamente.\n\nTienes {stats['Dinero']}€ mágicos en tu monedero de cuero. Los callejones invisibles albergan mercados negros y boticarios oscuros. Todo tiene un precio.\n\nElige tu arquetipo místico escribiéndolo abajo para adentrarte en el mapa abierto: Mago Urbano, Detective, Cazador o Humano Despierto."))
                 
                 reloj_label.value = f"⏳ RELOJ DE LA CRISIS: Quedan {stats['Dias']} días para el fin del Velo"
                 stats_text.value = f"❤️ {stats['Vida']}%  |  💰 {stats['Dinero']}€  |  🔮 {stats['Mana']}/30  |  ✨ {stats['EXP']}%"
@@ -136,18 +136,18 @@ def main(page: ft.Page):
                 page.update()
                 return
             else:
-                chat_view.controls.append(cargar_bloque("ia", "Pensar", "❌ Formato incorrecto. Por favor, introduce una dirección de correo electrónico válida para vincular tu partida (ejemplo: mago@gmail.com):"))
+                chat_view.controls.append(cargar_bloque("ia", "Pensar", "❌ Formato incorrecto. Por favor, introduce un correo electrónico válido para identificarte (ejemplo: jugador@gmail.com):"))
                 page.update()
                 return
 
-        # FLUJO DE JUEGO NORMAL CON LA IA (Solo si el correo ya está registrado)
+        # FLUJO DE JUEGO NORMAL CON LA IA (Solo se activa si el usuario ya se ha validado con su correo)
         mod = modo_radio.value
         chat_view.controls.append(cargar_bloque("usuario", mod, txt))
         historial.append({"rol": "usuario", "modo": mod, "texto": txt})
         page.update()
 
         prompt_sistema = f"""
-        Actúa como el Game Master de un RPG conversacional de Fantasía Urbana Contemporánea. Tu estilo es denso, de novela de misterio y profundamente descriptivo.
+        Actúa como el Game Master de un RPG conversacional de Fantasía Urbana Contemporánea. Tu estilo es denso, literario y profundamente descriptivo.
         [SISTEMA ECONÓMICO REAL Y COMERCIO PROFUNDO]
         - Gestionas una economía estricta. Todo tiene un precio real en Euros (€). No regales dinero ni objetos de valor porque sí.
         - Despliega un abanico inmenso de TIENDAS MÍSTICAS según donde vaya el jugador (armerías de varitas, boticarios, mercados negros, tabernas). 
@@ -162,11 +162,17 @@ def main(page: ft.Page):
         1. [ESTADÍSTICAS: Vida=VALOR_FINAL, Dinero=VALOR_FINAL, Mana=VALOR_FINAL, EXP=VALOR_FINAL, Dias=VALOR_FINAL]
         2. [MOCHILA: Escribe aquí la lista completa de objetos actualizados de su inventario]
         3. [MEMORIA: "Resumen corto de la trama o situación actual"].
-        """        completion = client.chat.completions.create(model="llama-3.3-70b-versatile", messages=[{"role": "system", "content": prompt_sistema}] + [{"role": "user" if m.get("rol") == "usuario" else "assistant", "content": m.get("texto", "")} for m in historial[-6:]])
+        """
+
+        mensajes_api = [{"role": "system", "content": prompt_sistema}]
+        for msg in historial[-6:]: 
+            rol_api = "user" if msg.get("rol") == "usuario" else "assistant"
+            mensajes_api.append({"role": rol_api, "content": msg.get("texto", "")})
+
+        completion = client.chat.completions.create(model="llama-3.3-70b-versatile", messages=mensajes_api)
         raw_res = str(completion.choices[0].message.content)
         res_narrador = raw_res
-
-        if "[MEMORIA:" in raw_res:
+            if "[MEMORIA:" in raw_res:
             try:
                 idx_ini = raw_res.index("[MEMORIA:")
                 idx_fin = raw_res.index("]", idx_ini)
@@ -221,7 +227,7 @@ def main(page: ft.Page):
             btn_save.bgcolor = "#10B981"
             page.update()
         else:
-            chat_view.controls.append(cargar_bloque("ia", "Pensar", "❌ Primero debes introducir tu correo electrónico en la barra inferior para poder guardar tu progreso."))
+            chat_view.controls.append(cargar_bloque("ia", "Pensar", "❌ Primero debes introducir tu correo electrónico en la barra inferior para poder registrar tu Grimorio."))
             page.update()
 
     def reiniciar(e):
@@ -241,6 +247,7 @@ def main(page: ft.Page):
         input_texto.hint_text = "Introduce tu correo electrónico para empezar..."
         nueva_semilla = random.choice(semillas_amenaza_final)
         lore_partida_contenedor = [f"Amenaza de extinción oculta elegida: {nueva_semilla}"]
+        chat_view.controls.clear()
         pintar_bienvenida()
         btn_save.content.text = "💾 Guardar Grimorio"
         btn_save.bgcolor = "#059669"
@@ -257,4 +264,3 @@ def main(page: ft.Page):
 
 ft.app(target=main, view=ft.AppView.WEB_BROWSER, port=8000)
         
-    
