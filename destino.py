@@ -3,9 +3,24 @@ from groq import Groq
 import os
 import random
 from datetime import datetime
+import json
 
-# BASE DE DATOS MÍSTICA INTEGRADA EN EL SERVIDOR (Inmune a fallos de Flet)
-MEMORIA_PERSISTENTE_RPG = {}
+# BASE DE DATOS FÍSICA REAL EN EL SERVIDOR (Inmune a apagones y cierres de app)
+ARCHIVO_BASE = "base_datos_grimorios.json"
+
+def leer_disco_duro():
+    if os.path.exists(ARCHIVO_BASE):
+        try:
+            with open(ARCHIVO_BASE, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except: pass
+    return {}
+
+def escribir_disco_duro(datos):
+    try:
+        with open(ARCHIVO_BASE, "w", encoding="utf-8") as f:
+            json.dump(datos, f, ensure_ascii=False, indent=4)
+    except: pass
 
 def main(page: ft.Page):
     # 1. Configuración de pantalla estilo App Móvil Premium
@@ -18,14 +33,11 @@ def main(page: ft.Page):
     # Conexión segura con la IA de Groq en Render
     client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
 
-    # CAPTURA AUTOMÁTICA DE IDENTIFICADOR INTEGRADO
-    # Usamos una variable de control interna de la página que Render respeta de forma individual
-    if not hasattr(page, "_rpg_session_token"):
-        page._rpg_session_token = f"token_{random.randint(100000, 999999)}"
+    # Variables de estado internas directas de la sesión actual
+    stats = {"Vida": 100, "Dinero": 50, "Mana": 30, "EXP": 0, "Dias": 30}
+    inventario = ["Varita de Sauce, Toga Escolar"]
+    historial = []
     
-    id_sesion = page._rpg_session_token
-
-    # Catálogo de amenazas límite para los 30 días reales
     semillas_amenaza_final = [
         "El motor de transmutación del Ministerio de Magia ha sido infectado por una maldición de óxido eterno que disuelve el maná de la ciudad.",
         "Una secta de licántropos y magos oscuros está preparando el despertar de un dragón mitológico sepultado bajo los cimientos urbanos.",
@@ -33,38 +45,30 @@ def main(page: ft.Page):
         "El Reloj de Arena Ancestral que mantiene la barrera de invisibilidad frente a los humanos mundanos ha sido agrietado en un sabotaje interno.",
         "Un antiguo linaje de vampiros puros está comprando los nexos de sangre de las alcantarillas para desatar una plaga mística purificadora."
     ]
+    semilla_inicial = random.choice(semillas_amenaza_final)
+    lore_partida_contenedor = [f"Amenaza de extinción oculta elegida: {semilla_inicial}"]
 
-    # COMPROBACIÓN E INYECCIÓN AUTOMÁTICA INTEGRADA EN MEMORIA
-    if id_sesion not in MEMORIA_PERSISTENTE_RPG:
-        semilla_inicial = random.choice(semillas_amenaza_final)
-        MEMORIA_PERSISTENTE_RPG[id_sesion] = {
-            "stats": {"Vida": 100, "Dinero": 50, "Mana": 30, "EXP": 0, "Dias": 30},
-            "historial": [],
-            "lore": [f"Amenaza de extinción oculta elegida: {semilla_inicial}"]
-        }
-
-    # Extraer variables dinámicas directas asociadas a este teléfono concreto
-    stats = MEMORIA_PERSISTENTE_RPG[id_sesion]["stats"]
-    historial = MEMORIA_PERSISTENTE_RPG[id_sesion]["historial"]
-    lore_partida_contenedor = MEMORIA_PERSISTENTE_RPG[id_sesion]["lore"]
+    # Variable para saber qué PIN numérico está usando este jugador actualmente
+    pin_activo = [None]
 
     # Obtener el ciclo horario de 24 horas reales
     hora_actual_real = datetime.now().strftime("%H:%M")
     es_de_noche = 20 <= datetime.now().hour or datetime.now().hour <= 6
     estado_dia_noche = "🌌 TOQUE DE QUEDA (El velo es frágil, criaturas en los callejones, patrols del Ministerio)" if es_de_noche else "☀️ BAJO EL VELO (La magia se esconde de los humanos, mercados mágicos abiertos, tabernas activas)"
 
-    # 3. Componentes visuales superiores unificados
+    # 3. Componentes visuales superiores unificados (Añadido el Inventario Gráfico)
     reloj_label = ft.Text(f"⏳ RELOJ DE LA CRISIS: Quedan {stats['Dias']} días para el fin del Velo", color="#A78BFA", weight=ft.FontWeight.BOLD, size=14)
     hora_label = ft.Text(f"⏰ Tiempo Real: {hora_actual_real} | {estado_dia_noche}", color="#38BDF8", size=12, weight=ft.FontWeight.W_500)
     stats_text = ft.Text(f"❤️ {stats['Vida']}%  |  💰 {stats['Dinero']}€  |  🔮 {stats['Mana']}/30  |  ✨ {stats['EXP']}%", color="#F3F4F6", weight=ft.FontWeight.BOLD, size=15)
+    inventario_text = ft.Text(f"🎒 Mochila: {inventario[0]}", color="#94A3B8", size=12, italic=True)
     
     stat_container = ft.Container(
-        content=ft.Column([reloj_label, hora_label, stats_text], alignment=ft.MainAxisAlignment.CENTER, horizontal_alignment=ft.CrossAxisAlignment.CENTER), 
+        content=ft.Column([reloj_label, hora_label, stats_text, ft.Divider(color="#1E293B", height=5), inventario_text], alignment=ft.MainAxisAlignment.CENTER, horizontal_alignment=ft.CrossAxisAlignment.CENTER), 
         padding=15, border_radius=12, gradient=ft.LinearGradient(colors=["#0F172A", "#1E1B4B"])
     )
 
     # 4. Historial del Chat Principal
-    chat_view = ft.ListView(expand=True, spacing=10, height=380)
+    chat_view = ft.ListView(expand=True, spacing=10, height=360)
     
     def cargar_bloque(rol, modo, texto):
         if rol == "usuario":
@@ -79,53 +83,73 @@ def main(page: ft.Page):
             padding=14, border_radius=10, bgcolor="#111827"
         )
 
-    # Cargar de forma integrada los mensajes si ya existía la sesión
-    if not historial:
-        chat_view.controls.append(cargar_bloque("ia", "Pensar", f"Detrás del ruidoso tráfico humano y los carteles de neón de la ciudad moderna, late un mundo oculto regido por la magia antigua, los estatutos del Velo Secreto y los decretos del Ministerio de Hechicería. Quedan 30 días reales antes de que la crisis actual rompa el equilibrio.\n\n[SITUACIÓN ECONÓMICA Y ENTORNO]\nHora actual: {hora_actual_real} ({estado_dia_noche}).\nTienes {stats['Dinero']}€ mágicos en tu monedero de cuero. Los callejones invisibles albergan mercados negros, armerías de varitas, boticarios de maná y tabernas oscuras llenas de secretos. Todo tiene un precio, y nadie regala nada.\n\nElige tu arquetipo místico escribiéndolo abajo para adentrarte en el mapa abierto: Mago Urbano, Detective, Cazador o Humano Despierto."))
-    else:
-        for msg in historial:
-            chat_view.controls.append(cargar_bloque(msg.get("rol", "ia"), msg.get("modo", "Pensar"), msg.get("texto", "")))
-                # 5. Controles inferiores
+    # Mensaje de bienvenida inicial estándar
+    def pintar_bienvenida():
+        chat_view.controls.clear()
+        chat_view.controls.append(cargar_bloque("ia", "Pensar", f"Detrás del ruidoso tráfico humano y los carteles de neón de la ciudad moderna, late un mundo oculto regido por la magia antigua, los estatutos del Velo Secreto y los decretos del Ministerio de Hechicería. Quedan 30 días reales antes de que la crisis actual rompa el equilibrio.\n\n[SITUACIÓN ECONÓMICA Y ENTORNO]\nHora actual: {hora_actual_real} ({estado_dia_noche}).\nTienes {stats['Dinero']}€ mágicos en tu monedero de cuero. Los callejones invisibles albergan mercados negros, armerías de varitas y boticarios clandestinos. Todo tiene un precio.\n\nSISTEMA DE RECUPERACIÓN: Si tenías una partida anterior, escribe tu PIN numérico de 3 cifras abajo en la barra y dale a enviar para recuperar tus mensajes e inventario. Si eres nuevo, escribe tu arquetipo para empezar: Mago Urbano, Detective, Cazador o Humano Despierto."))
+    
+    pintar_bienvenida()
+        # 5. Controles inferiores
     modo_radio = ft.RadioGroup(content=ft.Row([ft.Radio(value="Pensar", label="Narrar/Pensar"), ft.Radio(value="Hablar", label="Hablar")], alignment=ft.MainAxisAlignment.CENTER))
     modo_radio.value = "Pensar"
-    input_texto = ft.TextField(hint_text="¿Qué dirección toma tu voluntad?", bgcolor="#111827", border_color="#1E293B", expand=True)
+    input_texto = ft.TextField(hint_text="¿Qué dirección toma tu voluntad? (O pon tu PIN para cargar)", bgcolor="#111827", border_color="#1E293B", expand=True)
 
-    # 6. Lógica de ejecución de la IA con auto-guardado integrado
+    # 6. Lógica de ejecución de la IA al pulsar el botón
     def enviar_accion(e):
-        nonlocal lore_partida_contenedor
+        nonlocal lore_partida_contenedor, stats, historial, inventario
         if not input_texto.value: return
-        txt = input_texto.value
+        txt = input_texto.value.strip()
         mod = modo_radio.value
         input_texto.value = ""
         
+        # MECÁNICA DE CARGA AUTOMÁTICA DETECTANDO CÓDIGO/PIN DE 3 NÚMEROS
+        if txt.isdigit() and len(txt) == 3:
+            db_disco = leer_disco_duro()
+            if txt in db_disco:
+                partida_cargada = db_disco[txt]
+                stats = partida_cargada["stats"]
+                historial = partida_cargada["historial"]
+                inventario = [partida_cargada.get("inventario", "Varita de Sauce, Toga Escolar")] if "inventario" in partida_cargada else [partida_cargada.get("inventario_text", "Varita de Sauce, Toga Escolar")] if "inventario_text" in partida_cargada else [partida_cargada["inventario"]] if isinstance(partida_cargada.get("inventario"), str) else partida_cargada.get("inventario", ["Varita de Sauce, Toga Escolar"])
+                lore_partida_contenedor = partida_cargada["lore"]
+                pin_activo[0] = txt
+                
+                # Reconstruir visualmente la pantalla con los mensajes viejos recuperados
+                chat_view.controls.clear()
+                for msg in historial:
+                    chat_view.controls.append(cargar_bloque(msg.get("rol", "ia"), msg.get("modo", "Pensar"), msg.get("texto", "")))
+                
+                reloj_label.value = f"⏳ RELOJ DE LA CRISIS: Quedan {stats['Dias']} días para el fin del Velo"
+                stats_text.value = f"❤️ {stats['Vida']}%  |  💰 {stats['Dinero']}€  |  🔮 {stats['Mana']}/30  |  ✨ {stats['EXP']}%"
+                inventario_text.value = f"🎒 Mochila: {inventario}"
+                chat_view.controls.append(cargar_bloque("ia", "Pensar", f"🔮 Grimorio cargado con éxito desde el PIN [{txt}]. Tu mochila y tus mensajes históricos se han restaurado. Continúa tu andadura."))
+                btn_save.content.text = f"💾 Guardar en PIN {txt}"
+                page.update()
+                return
+            else:
+                chat_view.controls.append(cargar_bloque("ia", "Pensar", f"❌ No existe ninguna partida grabada con el PIN [{txt}]. Escribe tu arquetipo para iniciar una nueva partida."))
+                page.update()
+                return
+
+        # FLUJO DE JUEGO NORMAL CON LA IA
         chat_view.controls.append(cargar_bloque("usuario", mod, txt))
         historial.append({"rol": "usuario", "modo": mod, "texto": txt})
         page.update()
-
-        hora_envio = datetime.now().strftime("%H:%M")
-        es_noche_envio = 20 <= datetime.now().hour or datetime.now().hour <= 6
-
-        prompt_sistema = f"""
-        Actúa como el Game Master de un RPG conversacional de Fantasía Urbana Contemporánea (estilo el mundo oculto de Harry Potter o Cazadores de Sombras, pero adulto, realista y cruel). Tu estilo es denso, literario y profundamente descriptivo.
-        
+                prompt_sistema = f"""
+        Actúa como el Game Master de un RPG conversacional de Fantasía Urbana Contemporánea. Tu estilo es denso, literario y profundamente descriptivo.
         [SISTEMA ECONÓMICO REAL Y COMERCIO PROFUNDO]
-        - Gestionas una economía estricta. Todo tiene un precio real en Euros (€). No regales estadísticas ni dinero porque sí; ganar dinero debe ser difícil.
-        - Despliega un abanico inmenso de TIENDAS MÍSTICAS según donde vaya el jugador: Armerías de varitas, boticarios de pociones, mercados negros de reliquias, tabernas mágicas, etc.
-        - Si el jugador compra un objeto, ponle un precio lógico detallado en el diálogo.
-        
+        - Gestionas una economía estricta. Todo tiene un precio real en Euros (€). No regales dinero ni objetos de valor porque sí.
+        - Despliega un abanico inmenso de TIENDAS MÍSTICAS según donde vaya el jugador (armerías de varitas, boticarios, mercados negros, tabernas). 
+        - Si el jugador compra un objeto en un comercio, des cuenta el precio de su dinero y mételo explícitamente dentro de su mochila.
         [RITMO DE APOCALIPSIS VARIABLE]
-        La gran amenaza final que destruirá el Velo a los 30 días es: '{str(lore_partida_contenedor)}'. Decide si revelar este peligro inmediatamente o no según la situación.
-        
-        [MUNDO ABIERTO Y CICLO HORARIO]
-        La hora real es exactamente las {hora_envio}. Si es de noche ({es_noche_envio}), los mercados negros abren y las criaturas de los callejones son letales. Si el jugador ignora una tienda o rechaza una misión, acéptalo de inmediato y narra cómo el mundo sigue girando sin él.
-        
+        La gran amenaza final que destruirá el Velo a los 30 días es: '{str(lore_partida_contenedor)}'. Decide si revelar este peligro inmediatamente o dejar caer pistas y rumores discretos de fondo.
         [REGLA DE ASIGNACIÓN CRÍTICA DE MARCADORES]
-        Al final de tu respuesta, debes evaluar las estadísticas del jugador. REGLA: Los números que pongas en [ESTADÍSTICAS] sustituirán por completo a los anteriores. NO son incrementos, son los NUEVOS VALORES FIJOS. No los subas sin sentido. Si compra algo, resta el dinero. Si sufre daño, baja la vida.
+        Al final de tu respuesta, debes evaluar las estadísticas y la mochila del jugador. REGLA: Los datos que pongas sustituirán por completo a los anteriores. NO son incrementos, son los NUEVOS VALORES FIJOS.
         Valores actuales del jugador antes de tu turno: Vida={stats['Vida']}, Dinero={stats['Dinero']}, Mana={stats['Mana']}, EXP={stats['EXP']}, Dias={stats['Dias']}.
-        
-        AL FINAL ABSOLUTO de tu mensaje, incluye estrictamente estos dos bloques en este formato exacto:
+        Contenido actual de la Mochila: '{inventario}'.
+        AL FINAL ABSOLUTO de tu mensaje, incluye estrictamente estos tres bloques en este formato exacto:
         1. [ESTADÍSTICAS: Vida=VALOR_FINAL, Dinero=VALOR_FINAL, Mana=VALOR_FINAL, EXP=VALOR_FINAL, Dias=VALOR_FINAL]
-        2. [MEMORIA: "Resumen corto de la trama, inventario actual del jugador o situación"].
+        2. [MOCHILA: Escribe aquí la lista completa de objetos actualizados de su inventario]
+        3. [MEMORIA: "Resumen corto de la trama o situación actual"].
         """
 
         mensajes_api = [{"role": "system", "content": prompt_sistema}]
@@ -134,10 +158,7 @@ def main(page: ft.Page):
             mensajes_api.append({"role": rol_api, "content": msg.get("texto", "")})
 
         completion = client.chat.completions.create(model="llama-3.3-70b-versatile", messages=mensajes_api)
-        
-        # --- EXTRACCIÓN OFICIAL PERMANENTE CORREGIDA POR ÍNDICE DE LISTA CHOICES ---
         raw_res = str(completion.choices[0].message.content)
-
         res_narrador = raw_res
         
         if "[MEMORIA:" in raw_res:
@@ -146,9 +167,16 @@ def main(page: ft.Page):
             contenido_lore = partes_lore[1].replace("]", "").replace('"', '').strip()
             lore_partida_contenedor = [contenido_lore]
 
+        if "[MOCHILA:" in raw_res:
+            partes_inv = raw_res.split("[MOCHILA:")
+            if "[MEMORIA:" not in partes_inv[0]:
+                res_narrador = partes_inv[0]
+            contenido_inv = partes_inv[1].split("]")[0].strip()
+            inventario = [contenido_inv]
+
         if "[ESTADÍSTICAS:" in raw_res:
             partes_cambios = raw_res.split("[ESTADÍSTICAS:")
-            if "[MEMORIA:" not in partes_cambios[0]:
+            if "[MOCHILA:" not in partes_cambios[0] and "[MEMORIA:" not in partes_cambios[0]:
                 res_narrador = partes_cambios[0]
             
             cambios_str = partes_cambios[1].split("]")[0].strip()
@@ -163,61 +191,65 @@ def main(page: ft.Page):
                         stats[k] = v
                 except: pass
 
-        # Guardar en la lista visual del móvil
         chat_view.controls.append(cargar_bloque("ia", "Pensar", res_narrador.strip()))
         historial.append({"rol": "ia", "texto": res_narrador.strip()})
-        
-        # --- AUTO-GUARDADO INTEGRADO: Guardamos los punteros actualizados en el servidor nativo ---
-        MEMORIA_PERSISTENTE_RPG[id_sesion] = {
-            "stats": stats,
-            "historial": historial,
-            "lore": lore_partida_contenedor
-        }
-        
         reloj_label.value = f"⏳ RELOJ DE LA CRISIS: Quedan {stats['Dias']} días para el fin del Velo"
         hora_label.value = f"⏰ Tiempo Real: {datetime.now().strftime('%H:%M')} | {'🌌 TOQUE DE QUEDA' if (20 <= datetime.now().hour or datetime.now().hour <= 6) else '☀️ BAJO EL VELO'}"
         stats_text.value = f"❤️ {stats['Vida']}%  |  💰 {stats['Dinero']}€  |  🔮 {stats['Mana']}/30  |  ✨ {stats['EXP']}%"
+        inventario_text.value = f"🎒 Mochila: {inventario}"
         page.update()
+
+    def confirmar_pin_guardado(e):
+        pin = input_pin.value.strip()
+        if not pin.isdigit() or len(pin) != 3:
+            input_pin.error_text = "Debe ser de 3 números"
+            page.update()
+            return
+        db_disco = leer_disco_duro()
+        db_disco[pin] = {"stats": stats, "historial": historial, "inventario": inventario, "lore": lore_partida_contenedor}
+        escribir_disco_duro(db_disco)
+        pin_activo[0] = pin
+        page.dialog.open = False
+        btn_save.content.text = f"✅ Guardado en PIN {pin}"
+        btn_save.bgcolor = "#10B981"
+        page.update()
+
+    input_pin = ft.TextField(label="Inventa un PIN de 3 números (ej: 555)", password=True, max_length=3)
+    dialogo_guardar = ft.AlertDialog(title=ft.Text("💾 Sellar Grimorio"), content=input_pin, actions=[ft.ElevatedButton("🔮 Grabar en Disco", on_click=confirmar_pin_guardado)])
+
+    def abrir_menu_guardar(e):
+        if pin_activo[0] is not None:
+            db_disco = leer_disco_duro()
+            db_disco[pin_activo[0]] = {"stats": stats, "historial": historial, "inventario": inventario, "lore": lore_partida_contenedor}
+            escribir_disco_duro(db_disco)
+            btn_save.content.text = f"✅ Actualizado PIN {pin_activo[0]}"
+            page.update()
+        else:
+            page.dialog = dialogo_guardar
+            dialogo_guardar.open = True
+            page.update()
 
     def reiniciar(e):
-        nonlocal lore_partida_contenedor
-        stats["Vida"] = 100
-        stats["Dinero"] = 50
-        stats["Mana"] = 30
-        stats["EXP"] = 0
-        stats["Dias"] = 30
+        nonlocal lore_partida_contenedor, inventario
+        stats["Vida"], stats["Dinero"], stats["Mana"], stats["EXP"], stats["Dias"] = 100, 50, 30, 0, 30
+        inventario = ["Varita de Sauce, Toga Escolar"]
         historial.clear()
-        
+        pin_activo[0] = None
         nueva_semilla = random.choice(semillas_amenaza_final)
         lore_partida_contenedor = [f"Amenaza de extinción oculta elegida: {nueva_semilla}"]
-        
-        MEMORIA_PERSISTENTE_RPG[id_sesion] = {
-            "stats": stats,
-            "historial": historial,
-            "lore": lore_partida_contenedor
-        }
-        
-        chat_view.controls.clear()
-        chat_view.controls.append(cargar_bloque("ia", "Pensar", f"Detrás del ruidoso tráfico humano y los carteles de neón de la ciudad moderna, late un mundo oculto regido por la magia antigua, los estatutos del Velo Secreto y los decretos del Ministerio de Hechicería. Quedan 30 días reales de estabilidad existencial antes de que un desastre irreversible arrastre este world al olvido.\n\n[SITUACIÓN ECONÓMICA Y ENTORNO]\nHora actual: {datetime.now().strftime('%H:%M')} . Los callejones invisibles albergan mercados negros, armerías de varitas, boticarios de maná y tabernas oscuras llenas de secretos. Todo tiene un precio.\n\nElige tu arquetipo maldito escribiéndolo abajo: Mago Urbano, Detective, Cazador o Humano Despierto."))
-        
+        pintar_bienvenida()
+        btn_save.content.text = "💾 Guardar Grimorio"
+        btn_save.bgcolor = "#059669"
         reloj_label.value = f"⏳ RELOJ DE LA CRISIS: Quedan {stats['Dias']} días para el fin del Velo"
         stats_text.value = f"❤️ {stats['Vida']}%  |  💰 {stats['Dinero']}€  |  🔮 {stats['Mana']}/30  |  ✨ {stats['EXP']}%"
+        inventario_text.value = f"🎒 Mochila: {inventario}"
         page.update()
 
-    btn_enviar = ft.ElevatedButton(
-        content=ft.Text("🚀 ALTERAR EL DESTINO", color="white", weight=ft.FontWeight.BOLD),
-        bgcolor="#6D28D9", on_click=enviar_accion, height=50
-    )
+    btn_enviar = ft.ElevatedButton(content=ft.Text("🚀 ALTERAR EL DESTINO", color="white", weight=ft.FontWeight.BOLD), bgcolor="#6D28D9", on_click=enviar_accion, height=50)
+    btn_save = ft.ElevatedButton(content=ft.Text("💾 Guardar Grimorio", color="white", weight=ft.FontWeight.BOLD), bgcolor="#059669", on_click=abrir_menu_guardar)
+    btn_reset = ft.TextButton(content=ft.Text("💀 Reiniciar", color="#EF4444", weight=ft.FontWeight.BOLD), on_click=reiniciar)
 
-    btn_reset = ft.TextButton(
-        content=ft.Text("💀 Reiniciar Partida", color="#EF4444", weight=ft.FontWeight.BOLD), on_click=reiniciar
-    )
-
-    page.add(
-        ft.Column([
-            ft.Row([ft.Text("🧙‍♂️ CRÓNICAS DEL VELO", size=14, weight=ft.FontWeight.BOLD, color="#9333EA"), btn_reset], alignment=ft.MainAxisAlignment.SPACE_BETWEEN), 
-            stat_container, ft.Divider(color="#1E293B"), chat_view, ft.Divider(color="#1E293B"), modo_radio, ft.Row([input_texto, btn_enviar])
-        ], expand=True)
-    )
+    page.add(ft.Column([ft.Row([ft.Text("🧙‍♂️ CRÓNICAS DEL VELO", size=14, weight=ft.FontWeight.BOLD, color="#9333EA"), ft.Row([btn_save, btn_reset], spacing=5)], alignment=ft.MainAxisAlignment.SPACE_BETWEEN), stat_container, ft.Divider(color="#1E293B"), chat_view, ft.Divider(color="#1E293B"), modo_radio, ft.Row([input_texto, btn_enviar])], expand=True))
 
 ft.app(target=main, view=ft.AppView.WEB_BROWSER, port=8000)
+        
