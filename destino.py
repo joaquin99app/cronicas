@@ -170,22 +170,24 @@ def main(page: ft.Page):
             mensajes.append({"role": "user" if msg["rol"] == "usuario" else "assistant", "content": msg["texto"]})
 
         completion = client.chat.completions.create(model="llama-3.3-70b-versatile", messages=mensajes)
-        raw_res = str(completion.choices.message.content)
+        
+        # --- AQUÍ APLICAMOS LA CORRECCIÓN ABSOLUTA UTILIZANDO EL ÍNDICE [0] REGLAMENTARIO DE GROQ ---
+        raw_res = str(completion.choices[0].message.content)
 
         res_narrador = raw_res
         
         if "[MEMORIA:" in raw_res:
             partes_lore = raw_res.split("[MEMORIA:")
-            res_narrador = partes_lore
-            contenido_lore = partes_lore.replace("]", "").replace('"', '').strip()
+            res_narrador = partes_lore[0]
+            contenido_lore = partes_lore[1].replace("]", "").replace('"', '').strip()
             lore_partida_contenedor = [contenido_lore]
 
         if "[ESTADÍSTICAS:" in raw_res:
             partes_cambios = raw_res.split("[ESTADÍSTICAS:")
-            if "[MEMORIA:" not in partes_cambios:
-                res_narrador = partes_cambios
+            if "[MEMORIA:" not in partes_cambios[0]:
+                res_narrador = partes_cambios[0]
             
-            cambios_str = partes_cambios.split("]").strip()
+            cambios_str = partes_cambios[1].split("]")[0].strip()
             for cambio in cambios_str.split(","):
                 try:
                     clave, valor = cambio.split("=")
@@ -205,7 +207,6 @@ def main(page: ft.Page):
         stats_text.value = f"❤️ {stats['Vida']}%  |  💰 {stats['Dinero']}€  |  🔮 {stats['Mana']}/30  |  ✨ {stats['EXP']}%"
         page.update()
 
-    # CORRECCIÓN DE PALABRA CLAVE: Sincronización real con el identificador id_id de internet
     def acc_guardar(e):
         btn_save.content.text = "⏳ Sincronizando..."
         page.update()
@@ -269,3 +270,4 @@ def main(page: ft.Page):
     )
 
 ft.app(target=main, view=ft.AppView.WEB_BROWSER, port=8000)
+        
