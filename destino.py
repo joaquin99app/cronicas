@@ -40,14 +40,17 @@ def borrar_nube_remota(correo):
     except: pass
 
 def main(page: ft.Page):
+    # 1. Configuración de pantalla estilo App Móvil Premium
     page.title = "🚨 Crónicas del Velo Mágico"
     page.bgcolor = "#05070B"
     page.theme_mode = ft.ThemeMode.DARK
     page.scroll = ft.ScrollMode.AUTO
     page.padding = 20
 
+    # Conexión segura con la IA de Groq en Render
     client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
 
+    # Variables de estado internas de la sesión actual
     stats = {"Vida": 100, "Dinero": 50, "Mana": 30, "EXP": 0, "Dias": 30}
     inventario_contenedor = ["Varita de Sauce, Toga Escolar"]
     historial = []
@@ -62,8 +65,10 @@ def main(page: ft.Page):
     semilla_inicial = random.choice(semillas_amenaza_final)
     lore_partida_contenedor = [f"Amenaza de extinción oculta elegida: {semilla_inicial}"]
 
+    # Variables de control de correo electrónico fijadas en la página
     page.data = {"correo_usuario": None}
-        reloj_label = ft.Text(f"⏳ RELOJ DE LA CRISIS: Quedan {stats['Dias']} días para el fin del Velo", color="#A78BFA", weight=ft.FontWeight.BOLD, size=14)
+        # 3. Componentes visuales superiores unificados (Añadido el Inventario Gráfico)
+    reloj_label = ft.Text(f"⏳ RELOJ DE LA CRISIS: Quedan {stats['Dias']} días para el fin del Velo", color="#A78BFA", weight=ft.FontWeight.BOLD, size=14)
     hora_label = ft.Text(f"⏰ Tiempo Real: {datetime.now().strftime('%H:%M')} | ☀️ BAJO EL VELO", color="#38BDF8", size=12, weight=ft.FontWeight.W_500)
     stats_text = ft.Text(f"❤️ {stats['Vida']}%  |  💰 {stats['Dinero']}€  |  🔮 {stats['Mana']}/30  |  ✨ {stats['EXP']}%", color="#F3F4F6", weight=ft.FontWeight.BOLD, size=15)
     inventario_text = ft.Text(f"🎒 Mochila: {inventario_contenedor}", color="#94A3B8", size=12, italic=True)
@@ -73,6 +78,7 @@ def main(page: ft.Page):
         padding=15, border_radius=12, gradient=ft.LinearGradient(colors=["#0F172A", "#1E1B4B"])
     )
 
+    # 4. Historial del Chat Principal
     chat_view = ft.ListView(expand=True, spacing=10, height=360)
     
     def cargar_bloque(rol, modo, texto):
@@ -94,16 +100,19 @@ def main(page: ft.Page):
     
     pintar_bienvenida()
 
+    # 5. Controles inferiores
     modo_radio = ft.RadioGroup(content=ft.Row([ft.Radio(value="Pensar", label="Narrar/Pensar"), ft.Radio(value="Hablar", label="Hablar")], alignment=ft.MainAxisAlignment.CENTER))
     modo_radio.value = "Pensar"
     input_texto = ft.TextField(hint_text="Introduce tu correo electrónico para empezar...", bgcolor="#111827", border_color="#1E293B", expand=True)
 
+    # 6. Lógica de ejecución de la IA al pulsar el botón
     def enviar_accion(e):
         nonlocal lore_partida_contenedor, stats, historial, inventario_contenedor
         if not input_texto.value: return
         txt = input_texto.value.strip()
         input_texto.value = ""
         
+        # MECÁNICA DE CARGA AUTOMÁTICA DETECTANDO EL CORREO ELECTRÓNICO (Contiene arroba y punto)
         if page.data["correo_usuario"] is None:
             if "@" in txt and "." in txt:
                 page.data["correo_usuario"] = txt
@@ -137,13 +146,14 @@ def main(page: ft.Page):
                 page.update()
                 return
 
+        # FLUJO DE JUEGO NORMAL CON LA IA (Solo se activa si el usuario ya se ha validado con su correo)
         mod = modo_radio.value
         chat_view.controls.append(cargar_bloque("usuario", mod, txt))
         historial.append({"rol": "usuario", "modo": mod, "texto": txt})
         page.update()
 
         prompt_sistema = f"""
-        Actúa como el Game Master de un RPG conversacional de Fantasía Urbana Contemporánea. Tu estilo es denso, literario y profundamente descriptivo.
+        Actúa como el Game Master de un RPG conversacional de Fantasía Urbana Contemporánea. Tu estilo es denso, de novela de misterio y profundamente descriptivo.
         [SISTEMA ECONÓMICO REAL Y COMERCIO PROFUNDO]
         - Gestionas una economía estricta. Todo tiene un precio real en Euros (€). No regales dinero ni objetos de valor porque sí.
         - Despliega un abanico inmenso de TIENDAS MÍSTICAS según donde vaya el jugador (armerías de varitas, boticarios, mercados negros, tabernas). 
@@ -160,15 +170,10 @@ def main(page: ft.Page):
         3. [MEMORIA: "Resumen corto de la trama o situación actual"].
         """
 
-        mensajes_api = [{"role": "system", "content": prompt_sistema}]
-        for msg in historial[-6:]: 
-            rol_api = "user" if msg.get("rol") == "usuario" else "assistant"
-            mensajes_api.append({"role": rol_api, "content": msg.get("texto", "")})
-
-        completion = client.chat.completions.create(model="llama-3.3-70b-versatile", messages=mensajes_api)
+        completion = client.chat.completions.create(model="llama-3.3-70b-versatile", messages=[{"role": "system", "content": prompt_sistema}] + [{"role": "user" if m.get("rol") == "usuario" else "assistant", "content": m.get("texto", "")} for m in historial[-6:]])
         raw_res = str(completion.choices[0].message.content)
         res_narrador = raw_res
-                if "[MEMORIA:" in raw_res:
+            if "[MEMORIA:" in raw_res:
             try:
                 idx_ini = raw_res.index("[MEMORIA:")
                 idx_fin = raw_res.index("]", idx_ini)
