@@ -4,6 +4,35 @@ import os
 import random
 from datetime import datetime
 import json
+import urllib.request
+
+# NUBE COMPATIBLE PURA DE PYTHON (Guarda de forma invisible el progreso por IP/Navegador)
+URL_NUBE_BASE = "https://kvdb.io"
+
+def cargar_partida_nube(id_jugador):
+    try:
+        url = f"{URL_NUBE_BASE}{id_jugador}"
+        req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
+        with urllib.request.urlopen(req, timeout=4) as response:
+            data = json.loads(response.read().decode('utf-8'))
+            return {
+                "stats": data["stats"],
+                "historial": data["historial"],
+                "lore": data["lore"]
+            }
+    except:
+        return None
+
+def guardar_partida_nube(id_jugador, stats, historial, lore):
+    try:
+        url = f"{URL_NUBE_BASE}{id_jugador}"
+        payload = json.dumps({"stats": stats, "historial": historial, "lore": lore}).encode('utf-8')
+        req = urllib.request.Request(url, data=payload, headers={'Content-Type': 'application/json', 'User-Agent': 'Mozilla/5.0'}, method="POST")
+        with urllib.request.urlopen(req, timeout=4) as response:
+            pass
+        return True
+    except:
+        return False
 
 def main(page: ft.Page):
     # 1. Configuración de pantalla estilo App Móvil Premium
@@ -16,6 +45,10 @@ def main(page: ft.Page):
     # Conexión segura con la IA de Groq en Render
     client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
 
+    # Crear una huella digital invisible combinando los datos de red del terminal
+    ip_terminal = page.client_ip if page.client_ip else "mundano_anonimo"
+    id_unico_invisible = f"user_{ip_terminal.replace('.', '_').replace(':', '_')}"
+
     # Catálogo de amenazas límite para los 30 días reales
     semillas_amenaza_final = [
         "El motor de transmutación del Ministerio de Magia ha sido infectado por una maldición de óxido eterno que disuelve el maná de la ciudad.",
@@ -25,28 +58,16 @@ def main(page: ft.Page):
         "Un antiguo linaje de vampiros puros está comprando los nexos de sangre de las alcantarillas para desatar una plaga mística purificadora."
     ]
 
-    # 2. SISTEMA DE GUARDADO FÍSICO DIRECTO EN EL MÓVIL (Blindado contra caídas)
-    # Intentamos extraer la memoria local guardada en el almacenamiento del smartphone
-    g_stats = page.client_storage.get("velomagico_stats")
-    g_historial = page.client_storage.get("velomagico_historial")
-    g_lore = page.client_storage.get("velomagico_lore")
+    # CARGA INVISIBLE DE FONDO AL ENCENDER LA APP
+    partida_salvada = cargar_partida_nube(id_unico_invisible)
 
-    # Inicializar estadísticas fijas si el teléfono no tiene memoria previa
-    if g_stats is not None:
-        stats = json.loads(str(g_stats))
+    if partida_salvada and len(partida_salvada["historial"]) > 0:
+        stats = partida_salvada["stats"]
+        historial = partida_salvada["historial"]
+        lore_partida_contenedor = partida_salvada["lore"]
     else:
         stats = {"Vida": 100, "Dinero": 50, "Mana": 30, "EXP": 0, "Dias": 30}
-
-    # Inicializar historial de chat
-    if g_historial is not None:
-        historial = json.loads(str(g_historial))
-    else:
         historial = []
-
-    # Inicializar lore secreto procedural
-    if g_lore is not None:
-        lore_partida_contenedor = json.loads(str(g_lore))
-    else:
         semilla_inicial = random.choice(semillas_amenaza_final)
         lore_partida_contenedor = [f"Amenaza de extinción oculta elegida: {semilla_inicial}"]
 
@@ -81,12 +102,12 @@ def main(page: ft.Page):
             padding=14, border_radius=10, bgcolor="#111827"
         )
 
-    # Reconstruir el chat histórico leyendo la memoria física local
+    # Pintar los bloques de la historia guardada de fondo de forma inmediata
     if not historial:
-        chat_view.controls.append(cargar_bloque("ia", "Pensar", f"Detrás del ruidoso tráfico humano y los carteles de neón de la ciudad moderna, late un world oculto regido por la magia antigua, los estatutos del Velo Secreto y los decretos del Ministerio de Hechicería. Quedan 30 días reales antes de que la crisis actual rompa el equilibrio.\n\n[SITUACIÓN ECONÓMICA Y ENTORNO]\nHora actual: {hora_actual_real} ({estado_dia_noche}).\nTienes {stats['Dinero']}€ mágicos en tu monedero de cuero. Los callejones invisibles albergan mercados negros, armerías de varitas, boticarios de maná y tabernas oscuras llenas de secretos. Todo tiene un precio, y nadie regala nada.\n\nElige tu arquetipo místico escribiéndolo abajo para adentrarte en el mapa abierto: Mago Urbano, Detective, Cazador o Humano Despierto."))
+        chat_view.controls.append(cargar_bloque("ia", "Pensar", f"Detrás del ruidoso tráfico humano y los carteles de neón de la ciudad moderna, late un mundo oculto regido por la magia antigua, los estatutos del Velo Secreto y los decretos del Ministerio de Hechicería. Quedan 30 días reales antes de que la crisis actual rompa el equilibrio.\n\n[SITUACIÓN ECONÓMICA Y ENTORNO]\nHora actual: {hora_actual_real} ({estado_dia_noche}).\nTienes {stats['Dinero']}€ mágicos en tu monedero de cuero. Los callejones invisibles albergan mercados negros, armerías de varitas, boticarios de maná y tabernas oscuras llenas de secretos. Todo tiene un precio, y nadie regala nada.\n\nElige tu arquetipo místico escribiéndolo abajo para adentrarte en el mapa abierto: Mago Urbano, Detective, Cazador o Humano Despierto."))
     else:
         for msg in historial:
-            chat_view.controls.append(cargar_bloque(msg.get("rol"), msg.get("modo", "Pensar"), msg.get("texto")))
+            chat_view.controls.append(cargar_bloque(msg.get("rol", "ia"), msg.get("modo", "Pensar"), msg.get("texto", "")))
                 # 5. Controles inferiores
     modo_radio = ft.RadioGroup(content=ft.Row([ft.Radio(value="Pensar", label="Narrar/Pensar"), ft.Radio(value="Hablar", label="Hablar")], alignment=ft.MainAxisAlignment.CENTER))
     modo_radio.value = "Pensar"
@@ -108,10 +129,10 @@ def main(page: ft.Page):
         es_noche_envio = 20 <= datetime.now().hour or datetime.now().hour <= 6
 
         prompt_sistema = f"""
-        Actúa como el Game Master de un RPG conversacional de Fantasía Urbana Contemporánea (estilo el world oculto de Harry Potter, pero adulto y cruel). Tu estilo es denso y profundamente descriptivo.
+        Actúa como el Game Master de un RPG conversacional de Fantasía Urbana Contemporánea (estilo el mundo oculto de Harry Potter o Cazadores de Sombras, pero adulto, realista y cruel). Tu estilo es denso, literario y profundamente descriptivo.
         
         [SISTEMA ECONÓMICO REAL Y COMERCIO PROFUNDO]
-        - Gestionas una economía estricta. Todo tiene un precio real en Euros (€). No regales estadísticas ni dinero porque sí.
+        - Gestionas una economía estricta. Todo tiene un precio real en Euros (€). No regales estadísticas ni dinero porque sí; ganar dinero debe ser difícil.
         - Despliega un abanico inmenso de TIENDAS MÍSTICAS según donde vaya el jugador: Armerías de varitas, boticarios de pociones, mercados negros de reliquias, tabernas mágicas, etc.
         - Si el jugador compra un objeto, ponle un precio lógico detallado en el diálogo.
         
@@ -119,7 +140,7 @@ def main(page: ft.Page):
         La gran amenaza final que destruirá el Velo a los 30 días es: '{str(lore_partida_contenedor)}'. Decide si revelar este peligro inmediatamente o no según la situación.
         
         [MUNDO ABIERTO Y CICLO HORARIO]
-        La hora real es exactamente las {hora_envio}. Si es de noche ({es_noche_envio}), los peligros aumentan. Si el jugador ignora una tienda o rechaza una misión, acéptalo de inmediato y narra cómo el world sigue girando sin él.
+        La hora real es exactamente las {hora_envio}. Si es de noche ({es_noche_envio}), los mercados negros abren y las criaturas de los callejones son letales. Si el jugador ignora una tienda o rechaza una misión, acéptalo de inmediato y narra cómo el mundo sigue girando sin él.
         
         [REGLA DE ASIGNACIÓN CRÍTICA DE MARCADORES]
         Al final de tu respuesta, debes evaluar las estadísticas del jugador. REGLA: Los números que pongas en [ESTADÍSTICAS] sustituirán por completo a los anteriores. NO son incrementos, son los NUEVOS VALORES FIJOS. No los subas sin sentido. Si compra algo, resta el dinero. Si sufre daño, baja la vida.
@@ -133,25 +154,25 @@ def main(page: ft.Page):
         mensajes_api = [{"role": "system", "content": prompt_sistema}]
         for msg in historial[-6:]: 
             rol_api = "user" if msg.get("rol") == "usuario" else "assistant"
-            mensajes_api.append({"role": rol_api, "content": msg.get("texto")})
+            mensajes_api.append({"role": rol_api, "content": msg.get("texto", "")})
 
         completion = client.chat.completions.create(model="llama-3.3-70b-versatile", messages=mensajes_api)
-        raw_res = str(completion.choices[0].message.content)
+        raw_res = str(completion.choices.message.content)
 
         res_narrador = raw_res
         
         if "[MEMORIA:" in raw_res:
             partes_lore = raw_res.split("[MEMORIA:")
-            res_narrador = partes_lore[0]
-            contenido_lore = partes_lore[1].replace("]", "").replace('"', '').strip()
+            res_narrador = partes_lore
+            contenido_lore = partes_lore.replace("]", "").replace('"', '').strip()
             lore_partida_contenedor = [contenido_lore]
 
         if "[ESTADÍSTICAS:" in raw_res:
             partes_cambios = raw_res.split("[ESTADÍSTICAS:")
-            if "[MEMORIA:" not in partes_cambios[0]:
-                res_narrador = partes_cambios[0]
+            if "[MEMORIA:" not in partes_cambios:
+                res_narrador = partes_cambios
             
-            cambios_str = partes_cambios[1].split("]")[0].strip()
+            cambios_str = partes_cambios.split("]").strip()
             for cambio in cambios_str.split(","):
                 try:
                     clave, valor = cambio.split("=")
@@ -166,31 +187,20 @@ def main(page: ft.Page):
         chat_view.controls.append(cargar_bloque("ia", "Pensar", res_narrador.strip()))
         historial.append({"rol": "ia", "texto": res_narrador.strip()})
         
+        # --- GUARDADO AUTOMÁTICO INVISIBLE EN LA NUBE EN CADA TURNO ---
+        guardar_partida_nube(id_unico_invisible, stats, historial, lore_partida_contenedor)
+        
         reloj_label.value = f"⏳ RELOJ DE LA CRISIS: Quedan {stats['Dias']} días para el fin del Velo"
         hora_label.value = f"⏰ Tiempo Real: {datetime.now().strftime('%H:%M')} | {'🌌 TOQUE DE QUEDA' if (20 <= datetime.now().hour or datetime.now().hour <= 6) else '☀️ BAJO EL VELO'}"
         stats_text.value = f"❤️ {stats['Vida']}%  |  💰 {stats['Dinero']}€  |  🔮 {stats['Mana']}/30  |  ✨ {stats['EXP']}%"
         page.update()
 
-    # GUARDADO LOCAL AUTOMÁTICO AL PULSAR EL BOTÓN FÍSICO (Indestructible en el móvil)
-    def acc_guardar(e):
-        btn_save.content.text = "⏳ Grabando en Teléfono..."
-        page.update()
-        try:
-            page.client_storage.set("velomagico_stats", json.dumps(stats))
-            page.client_storage.set("velomagico_historial", json.dumps(historial))
-            page.client_storage.set("velomagico_lore", json.dumps(lore_partida_contenedor))
-            btn_save.content.text = "✅ Guardado Real"
-            btn_save.bgcolor = "#10B981"
-        except:
-            btn_save.content.text = "❌ Error Flet"
-            btn_save.bgcolor = "#EF4444"
-        page.update()
-
     def reiniciar(e):
+        # Limpiar la clave de la nube de forma segura enviando datos en blanco
         try:
-            page.client_storage.remove("velomagico_stats")
-            page.client_storage.remove("velomagico_historial")
-            page.client_storage.remove("velomagico_lore")
+            url = f"{URL_NUBE_BASE}{id_unico_invisible}"
+            req = urllib.request.Request(url, method="DELETE", headers={'User-Agent': 'Mozilla/5.0'})
+            with urllib.request.urlopen(req, timeout=3) as r: pass
         except: pass
             
         stats["Vida"] = 100
@@ -206,8 +216,6 @@ def main(page: ft.Page):
         chat_view.controls.clear()
         chat_view.controls.append(cargar_bloque("ia", "Pensar", f"Detrás del ruidoso tráfico humano y los carteles de neón de la ciudad moderna, late un world oculto regido por la magia antigua, los estatutos del Velo Secreto y los decretos del Ministerio de Hechicería. Quedan 30 días reales de estabilidad existencial antes de que un desastre irreversible arrastre este world al olvido.\n\n[SITUACIÓN ECONÓMICA Y ENTORNO]\nHora actual: {datetime.now().strftime('%H:%M')} . Los callejones invisibles albergan mercados negros, armerías de varitas, boticarios de maná y tabernas oscuras llenas de secretos. Todo tiene un precio.\n\nElige tu arquetipo maldito escribiéndolo abajo: Mago Urbano, Detective, Cazador o Humano Despierto."))
         
-        btn_save.content.text = "💾 Guardar Grimorio"
-        btn_save.bgcolor = "#059669"
         reloj_label.value = f"⏳ RELOJ DE LA CRISIS: Quedan {stats['Dias']} días para el fin del Velo"
         stats_text.value = f"❤️ {stats['Vida']}%  |  💰 {stats['Dinero']}€  |  🔮 {stats['Mana']}/30  |  ✨ {stats['EXP']}%"
         page.update()
@@ -216,25 +224,20 @@ def main(page: ft.Page):
         content=ft.Text("🚀 ALTERAR EL DESTINO", color="white", weight=ft.FontWeight.BOLD),
         bgcolor="#6D28D9", on_click=enviar_accion, height=50
     )
-    
-    btn_save = ft.ElevatedButton(
-        content=ft.Text("💾 Guardar Grimorio", color="white", weight=ft.FontWeight.BOLD),
-        bgcolor="#059669", on_click=acc_guardar
-    )
 
     btn_reset = ft.TextButton(
-        content=ft.Text("💀 Reiniciar", color="#EF4444", weight=ft.FontWeight.BOLD), on_click=reiniciar
+        content=ft.Text("💀 Reiniciar Partida", color="#EF4444", weight=ft.FontWeight.BOLD), on_click=reiniciar
     )
 
     page.add(
         ft.Column([
             ft.Row([
                 ft.Text("🧙‍♂️ CRÓNICAS DEL VELO", size=14, weight=ft.FontWeight.BOLD, color="#9333EA"), 
-                ft.Row([btn_save, btn_reset], spacing=5)
+                btn_reset
             ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN), 
             stat_container, ft.Divider(color="#1E293B"), chat_view, ft.Divider(color="#1E293B"), modo_radio, ft.Row([input_texto, btn_enviar])
         ], expand=True)
     )
 
 ft.app(target=main, view=ft.AppView.WEB_BROWSER, port=8000)
-        
+            
