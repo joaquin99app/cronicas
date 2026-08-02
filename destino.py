@@ -40,7 +40,7 @@ def main(page: ft.Page):
     
     semillas_amenaza_final = [
         "El motor de transmutación del Ministerio de Magia ha sido infectado por una maldición de óxido eterno que disuelve el maná de la ciudad.",
-        "Una secta de licántropos y magos oscuros está preparando el despertar de un dragon mitológico sepultado bajo los cimientos urbanos.",
+        "Una secta de licántropos y magos oscuros está preparando el despertar de un dragón mitológico sepultado bajo los cimientos urbanos.",
         "Un brote de 'estática mística' se está filtrando a través de la red eléctrica, borrando los recuerdos de los hechiceros y exponiendo el velo.",
         "El Reloj de Arena Ancestral que mantiene la barrera de invisibilidad frente a los humanos mundanos ha sido agrietado en un sabotaje interno.",
         "Un antiguo linaje de vampiros puros está comprando los nexos de sangre de las alcantarillas para desatar una plaga mística purificadora."
@@ -96,7 +96,6 @@ def main(page: ft.Page):
 
     # 6. Lógica de ejecución de la IA al pulsar el botón
     def enviar_accion(e):
-        # DECLARACIÓN INTEGRADA NONLOCAL DE CONTROL DE VARIABLES:
         nonlocal lore_partida_contenedor, stats, historial, inventario_contenedor
         if not input_texto.value: return
         txt = input_texto.value.strip()
@@ -152,7 +151,7 @@ def main(page: ft.Page):
         [RITMO DE APOCALIPSIS VARIABLE]
         La gran amenaza final que destruirá el Velo a los 30 días es: '{str(lore_partida_contenedor)}'. Decide si revelar este peligro inmediatamente o dejar caer pistas y rumores discretos de fondo.
         [REGLA DE ASIGNACIÓN CRÍTICA DE MARCADORES]
-        Al final de tu respuesta, debes evaluar las estadísticas del jugador. REGLA: Los datos que pongas sustituirán por completo a los anteriores. NO son incrementos, son los NUEVOS VALORES FIJOS.
+        Al final de tu respuesta, debes evaluar las estadísticas del jugador. REGLA: Los números que pongas en [ESTADÍSTICAS] sustituirán por completo a los anteriores. NO son incrementos, son los NUEVOS VALORES FIJOS.
         Valores actuales del jugador antes de tu turno: Vida={stats['Vida']}, Dinero={stats['Dinero']}, Mana={stats['Mana']}, EXP={stats['EXP']}, Dias={stats['Dias']}.
         Contenido actual de la Mochila: '{inventario_contenedor}'.
         AL FINAL ABSOLUTO de tu mensaje, incluye estrictamente estos tres bloques en este formato exacto:
@@ -167,7 +166,8 @@ def main(page: ft.Page):
             mensajes_api.append({"role": rol_api, "content": msg.get("texto", "")})
 
         completion = client.chat.completions.create(model="llama-3.3-70b-versatile", messages=mensajes_api)
-        raw_res = str(completion.choices[message].content) if isinstance(completion.choices, list) else str(completion.choices[0].message.content)
+        # CORRECCIÓN DE LA VARIABLE DE EXTRACCIÓN DE LA API DE GROQ:
+        raw_res = str(completion.choices[0].message.content)
         res_narrador = raw_res
                 if "[MEMORIA:" in raw_res:
             partes_lore = raw_res.split("[MEMORIA:")
@@ -177,14 +177,14 @@ def main(page: ft.Page):
 
         if "[MOCHILA:" in raw_res:
             partes_inv = raw_res.split("[MOCHILA:")
-            if "[MEMORIA:" not in partes_inv[0]:
+            if "[MEMORIA:" not in partes_inv:
                 res_narrador = partes_inv[0]
             contenido_inv = partes_inv[1].split("]")[0].strip()
             inventario_contenedor = [contenido_inv]
 
         if "[ESTADÍSTICAS:" in raw_res:
             partes_cambios = raw_res.split("[ESTADÍSTICAS:")
-            if "[MOCHILA:" not in partes_cambios[0] and "[MEMORIA:" not in partes_cambios[0]:
+            if "[MOCHILA:" not in partes_cambios and "[MEMORIA:" not in partes_cambios:
                 res_narrador = partes_cambios[0]
             
             cambios_str = partes_cambios[1].split("]")[0].strip()
