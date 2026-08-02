@@ -6,43 +6,41 @@ from datetime import datetime
 import json
 import urllib.request
 
-# CONEXIÓN EN LA NUBE INDESTRUCTIBLE (Guarda las partidas de forma permanente)
-URL_DB = "https://mockapi.io"
+# CONEXIÓN EN LA NUBE INDESTRUCTIBLE CON LLAVE DE SEGURIDAD (JSONbin Pública/Privada)
+URL_DB = "https://jsonbin.io"
+LLAVE_MISTICA = "$2a$10$R9ZfIePqP8kREbB6uKkJzO1N7WpE8p8Q4yX1V2W3Z4X5Y6Z7A8B9C"
 
-def cargar_datos_remotos(id_sesion):
+def cargar_datos_remotos():
     try:
-        req = urllib.request.Request(f"{URL_DB}/{id_sesion}", headers={'User-Agent': 'Mozilla/5.0'})
+        req = urllib.request.Request(URL_DB, headers={
+            'User-Agent': 'Mozilla/5.0',
+            'X-Master-Key': LLAVE_MISTICA
+        })
         with urllib.request.urlopen(req, timeout=5) as response:
             data = json.loads(response.read().decode('utf-8'))
+            record = data["record"]
             return {
-                "stats": json.loads(data["stats"]),
-                "historial": json.loads(data["historial"]),
-                "lore_partida": json.loads(data["lore_partida"])
+                "stats": record["stats"],
+                "historial": record["historial"],
+                "lore_partida": record["lore_partida"]
             }
     except:
         return None
 
-def guardar_datos_remotos(id_sesion, stats, historial, lore):
+def guardar_datos_remotos(stats, historial, lore):
     try:
-        # Comprobar primero si ya existe para decidir si hacer POST o PUT
-        existe = True
-        try:
-            req_check = urllib.request.Request(f"{URL_DB}/{id_sesion}", headers={'User-Agent': 'Mozilla/5.0'})
-            with urllib.request.urlopen(req_check, timeout=3) as r: pass
-        except:
-            existe = False
-
         payload = json.dumps({
-            "id": id_sesion,
-            "stats": json.dumps(stats),
-            "historial": json.dumps(historial),
-            "lore_partida": json.dumps(lore)
+            "stats": stats,
+            "historial": historial,
+            "lore_partida": lore
         }).encode('utf-8')
         
-        metodo = "PUT" if existe else "POST"
-        url_final = f"{URL_DB}/{id_sesion}" if existe else URL_DB
+        req = urllib.request.Request(URL_DB, data=payload, headers={
+            'Content-Type': 'application/json', 
+            'User-Agent': 'Mozilla/5.0',
+            'X-Master-Key': LLAVE_MISTICA
+        }, method="PUT")
         
-        req = urllib.request.Request(url_final, data=payload, headers={'Content-Type': 'application/json', 'User-Agent': 'Mozilla/5.0'}, method=metodo)
         with urllib.request.urlopen(req, timeout=5) as response:
             pass
         return True
@@ -60,9 +58,6 @@ def main(page: ft.Page):
     # Conexión segura con la IA de Groq en Render
     client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
 
-    # Fijamos el ID único permanente de tu juego
-    id_id = "1"
-
     # Catálogo de amenazas límite para los 30 días reales
     semillas_amenaza_final = [
         "El motor de transmutación del Ministerio de Magia ha sido infectado por una maldición de óxido eterno que disuelve el maná de la ciudad.",
@@ -73,9 +68,9 @@ def main(page: ft.Page):
     ]
 
     # CARGA HISTÓRICA DESDE LA BASE DE DATOS EXTERNA DE INTERNET
-    datos_remotos = cargar_datos_remotos(id_id)
+    datos_remotos = cargar_datos_remotos()
 
-    if datos_remotos:
+    if datos_remotos and len(datos_remotos["historial"]) > 0:
         stats = datos_remotos["stats"]
         historial = datos_remotos["historial"]
         lore_partida_contenedor = datos_remotos["lore_partida"]
@@ -121,7 +116,7 @@ def main(page: ft.Page):
         chat_view.controls.append(cargar_bloque("ia", "Pensar", f"Detrás del ruidoso tráfico humano y los carteles de neón de la ciudad moderna, late un world oculto regido por la magia antigua, los estatutos del Velo Secreto y los decretos del Ministerio de Hechicería. Quedan 30 días reales antes de que la crisis actual rompa el equilibrio.\n\n[SITUACIÓN ECONÓMICA Y ENTORNO]\nHora actual: {hora_actual_real} ({estado_dia_noche}).\nTienes {stats['Dinero']}€ mágicos en tu monedero de cuero. Los callejones invisibles albergan mercados negros, armerías de varitas, boticarios de maná y tabernas oscuras llenas de secretos. Todo tiene un precio, y nadie regala nada.\n\nElige tu arquetipo místico escribiéndolo abajo para adentrarte en el mapa abierto: Mago Urbano, Detective, Cazador o Humano Despierto."))
     else:
         for msg in historial:
-            chat_view.controls.append(cargar_bloque(msg["rol"], msg.get("modo", "Pensar"), msg["texto"]))
+            chat_view.controls.append(cargar_bloque(msg["role"] if "role" in msg else msg["rol"], msg.get("modo", "Pensar"), msg["texto"]))
                 # 5. Controles inferiores
     modo_radio = ft.RadioGroup(content=ft.Row([ft.Radio(value="Pensar", label="Narrar/Pensar"), ft.Radio(value="Hablar", label="Hablar")], alignment=ft.MainAxisAlignment.CENTER))
     modo_radio.value = "Pensar"
@@ -165,13 +160,12 @@ def main(page: ft.Page):
         2. [MEMORIA: "Resumen corto de la trama, inventario actual del jugador o situación"].
         """
 
-        mensajes = [{"role": "system", "content": prompt_sistema}]
+        mensajes_api = [{"role": "system", "content": prompt_sistema}]
         for msg in historial[-6:]: 
-            mensajes.append({"role": "user" if msg["rol"] == "usuario" else "assistant", "content": msg["texto"]})
+            rol_api = "user" if msg.get("rol") == "usuario" else "assistant"
+            mensajes_api.append({"role": rol_api, "content": msg["texto"]})
 
-        completion = client.chat.completions.create(model="llama-3.3-70b-versatile", messages=mensajes)
-        
-        # --- AQUÍ APLICAMOS LA CORRECCIÓN ABSOLUTA UTILIZANDO EL ÍNDICE [0] REGLAMENTARIO DE GROQ ---
+        completion = client.chat.completions.create(model="llama-3.3-70b-versatile", messages=mensajes_api)
         raw_res = str(completion.choices[0].message.content)
 
         res_narrador = raw_res
@@ -207,12 +201,13 @@ def main(page: ft.Page):
         stats_text.value = f"❤️ {stats['Vida']}%  |  💰 {stats['Dinero']}€  |  🔮 {stats['Mana']}/30  |  ✨ {stats['EXP']}%"
         page.update()
 
+    # AUTÉNTICO MANDATO DE GUARDADO: Sincronización masiva con clave rúnica en JSONbin
     def acc_guardar(e):
         btn_save.content.text = "⏳ Sincronizando..."
         page.update()
-        exito = guardar_datos_remotos(id_id, stats, historial, lore_partida_contenedor)
+        exito = guardar_datos_remotos(stats, historial, lore_partida_contenedor)
         if exito:
-            btn_save.content.text = "✅ Grimorio Salvado"
+            btn_save.content.text = "✅ Guardado Real"
             btn_save.bgcolor = "#10B981"
         else:
             btn_save.content.text = "❌ Error de Velo"
@@ -220,11 +215,8 @@ def main(page: ft.Page):
         page.update()
 
     def reiniciar(e):
-        Metodo_Borrar = "DELETE"
-        try:
-            req = urllib.request.Request(f"{URL_DB}/{id_id}", headers={'User-Agent': 'Mozilla/5.0'}, method=Metodo_Borrar)
-            with urllib.request.urlopen(req, timeout=5) as response: pass
-        except: pass
+        # Limpiar la nube para forzar un reinicio limpio
+        guardar_datos_remotos({"Vida": 100, "Dinero": 50, "Mana": 30, "EXP": 0, "Dias": 30}, [], ["Pendiente"])
             
         stats["Vida"] = 100
         stats["Dinero"] = 50
@@ -270,4 +262,3 @@ def main(page: ft.Page):
     )
 
 ft.app(target=main, view=ft.AppView.WEB_BROWSER, port=8000)
-        
