@@ -108,7 +108,7 @@ def main(page: ft.Page):
     else:
         for msg in historial:
             chat_view.controls.append(cargar_bloque(msg.get("rol", "ia"), msg.get("modo", "Pensar"), msg.get("texto", "")))
-                # 5. Controles inferiores
+          # 5. Controles inferiores
     modo_radio = ft.RadioGroup(content=ft.Row([ft.Radio(value="Pensar", label="Narrar/Pensar"), ft.Radio(value="Hablar", label="Hablar")], alignment=ft.MainAxisAlignment.CENTER))
     modo_radio.value = "Pensar"
     input_texto = ft.TextField(hint_text="¿Qué dirección toma tu voluntad?", bgcolor="#111827", border_color="#1E293B", expand=True)
@@ -157,22 +157,24 @@ def main(page: ft.Page):
             mensajes_api.append({"role": rol_api, "content": msg.get("texto", "")})
 
         completion = client.chat.completions.create(model="llama-3.3-70b-versatile", messages=mensajes_api)
-        raw_res = str(completion.choices.message.content)
+        
+        # --- SOLUCIÓN DE ÍNDICE MÁGICA: Extraemos la respuesta usando el índice obligatorio [0] ---
+        raw_res = str(completion.choices[0].message.content)
 
         res_narrador = raw_res
         
         if "[MEMORIA:" in raw_res:
             partes_lore = raw_res.split("[MEMORIA:")
-            res_narrador = partes_lore
-            contenido_lore = partes_lore.replace("]", "").replace('"', '').strip()
+            res_narrador = partes_lore[0]
+            contenido_lore = partes_lore[1].replace("]", "").replace('"', '').strip()
             lore_partida_contenedor = [contenido_lore]
 
         if "[ESTADÍSTICAS:" in raw_res:
             partes_cambios = raw_res.split("[ESTADÍSTICAS:")
-            if "[MEMORIA:" not in partes_cambios:
-                res_narrador = partes_cambios
+            if "[MEMORIA:" not in partes_cambios[0]:
+                res_narrador = partes_cambios[0]
             
-            cambios_str = partes_cambios.split("]").strip()
+            cambios_str = partes_cambios[1].split("]")[0].strip()
             for cambio in cambios_str.split(","):
                 try:
                     clave, valor = cambio.split("=")
@@ -196,7 +198,6 @@ def main(page: ft.Page):
         page.update()
 
     def reiniciar(e):
-        # Limpiar la clave de la nube de forma segura enviando datos en blanco
         try:
             url = f"{URL_NUBE_BASE}{id_unico_invisible}"
             req = urllib.request.Request(url, method="DELETE", headers={'User-Agent': 'Mozilla/5.0'})
@@ -240,4 +241,4 @@ def main(page: ft.Page):
     )
 
 ft.app(target=main, view=ft.AppView.WEB_BROWSER, port=8000)
-            
+      
