@@ -171,9 +171,10 @@ def main(page: ft.Page):
         """
 
         completion = client.chat.completions.create(model="llama-3.3-70b-versatile", messages=[{"role": "system", "content": prompt_sistema}] + [{"role": "user" if m.get("rol") == "usuario" else "assistant", "content": m.get("texto", "")} for m in historial[-6:]])
+        # CORRECCIÓN DE LA VARIABLE DE EXTRACCIÓN CON ÍNDICE REGLAMENTARIO DE LISTA:
         raw_res = str(completion.choices[0].message.content)
         res_narrador = raw_res
-            if "[MEMORIA:" in raw_res:
+                if "[MEMORIA:" in raw_res:
             try:
                 idx_ini = raw_res.index("[MEMORIA:")
                 idx_fin = raw_res.index("]", idx_ini)
