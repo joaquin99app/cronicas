@@ -4,36 +4,50 @@ import os
 import random
 from datetime import datetime
 import json
+import urllib.request
 
-# BASE DE DATOS FÍSICA REAL EN EL SERVIDOR (Inmune a apagones y cierres de app)
-ARCHIVO_BASE = "base_datos_grimorios.json"
+# NUBE REMOTA DE INTERNET REAL (Guarda de forma permanente e inmune a los reinicios de Render)
+URL_NUBE_BASE = "https://kvdb.io"
 
-def leer_disco_duro():
-    if os.path.exists(ARCHIVO_BASE):
-        try:
-            with open(ARCHIVO_BASE, "r", encoding="utf-8") as f:
-                return json.load(f)
-        except: pass
-    return {}
-
-def escribir_disco_duro(datos):
+def leer_nube_remota(correo):
     try:
-        with open(ARCHIVO_BASE, "w", encoding="utf-8") as f:
-            json.dump(datos, f, ensure_ascii=False, indent=4)
+        id_limpio = correo.replace("@", "_at_").replace(".", "_dot_")
+        url = f"{URL_NUBE_BASE}velo_user_{id_limpio}"
+        req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
+        with urllib.request.urlopen(req, timeout=4) as response:
+            return json.loads(response.read().decode('utf-8'))
+    except:
+        return None
+
+def escribir_nube_remota(correo, datos):
+    try:
+        id_limpio = correo.replace("@", "_at_").replace(".", "_dot_")
+        url = f"{URL_NUBE_BASE}velo_user_{id_limpio}"
+        payload = json.dumps(datos).encode('utf-8')
+        req = urllib.request.Request(url, data=payload, headers={'Content-Type': 'application/json', 'User-Agent': 'Mozilla/5.0'}, method="POST")
+        with urllib.request.urlopen(req, timeout=4) as response:
+            pass
+        return True
+    except:
+        return False
+
+def borrar_nube_remota(correo):
+    try:
+        id_limpio = correo.replace("@", "_at_").replace(".", "_dot_")
+        url = f"{URL_NUBE_BASE}velo_user_{id_limpio}"
+        req = urllib.request.Request(url, method="DELETE", headers={'User-Agent': 'Mozilla/5.0'})
+        with urllib.request.urlopen(req, timeout=3) as r: pass
     except: pass
 
 def main(page: ft.Page):
-    # 1. Configuración de pantalla estilo App Móvil Premium
     page.title = "🚨 Crónicas del Velo Mágico"
     page.bgcolor = "#05070B"
     page.theme_mode = ft.ThemeMode.DARK
     page.scroll = ft.ScrollMode.AUTO
     page.padding = 20
 
-    # Conexión segura con la IA de Groq en Render
     client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
 
-    # Variables de estado internas de la sesión actual
     stats = {"Vida": 100, "Dinero": 50, "Mana": 30, "EXP": 0, "Dias": 30}
     inventario_contenedor = ["Varita de Sauce, Toga Escolar"]
     historial = []
@@ -48,17 +62,9 @@ def main(page: ft.Page):
     semilla_inicial = random.choice(semillas_amenaza_final)
     lore_partida_contenedor = [f"Amenaza de extinción oculta elegida: {semilla_inicial}"]
 
-    # Variables de control de correo electrónico fijadas en la página
     page.data = {"correo_usuario": None}
-
-    # Obtener el ciclo horario de 24 horas reales
-    hora_actual_real = datetime.now().strftime("%H:%M")
-    es_de_noche = 20 <= datetime.now().hour or datetime.now().hour <= 6
-    estado_dia_noche = "🌌 TOQUE DE QUEDA (El velo es frágil, criaturas en los callejones, patrols del Ministerio)" if es_de_noche else "☀️ BAJO EL VELO (La magia se esconde de los humanos, mercados mágicos abiertos, tabernas activas)"
-
-    # 3. Componentes visuales superiores unificados (Añadido el Inventario Gráfico)
-    reloj_label = ft.Text(f"⏳ RELOJ DE LA CRISIS: Quedan {stats['Dias']} días para el fin del Velo", color="#A78BFA", weight=ft.FontWeight.BOLD, size=14)
-    hora_label = ft.Text(f"⏰ Tiempo Real: {hora_actual_real} | {estado_dia_noche}", color="#38BDF8", size=12, weight=ft.FontWeight.W_500)
+        reloj_label = ft.Text(f"⏳ RELOJ DE LA CRISIS: Quedan {stats['Dias']} días para el fin del Velo", color="#A78BFA", weight=ft.FontWeight.BOLD, size=14)
+    hora_label = ft.Text(f"⏰ Tiempo Real: {datetime.now().strftime('%H:%M')} | ☀️ BAJO EL VELO", color="#38BDF8", size=12, weight=ft.FontWeight.W_500)
     stats_text = ft.Text(f"❤️ {stats['Vida']}%  |  💰 {stats['Dinero']}€  |  🔮 {stats['Mana']}/30  |  ✨ {stats['EXP']}%", color="#F3F4F6", weight=ft.FontWeight.BOLD, size=15)
     inventario_text = ft.Text(f"🎒 Mochila: {inventario_contenedor}", color="#94A3B8", size=12, italic=True)
     
@@ -67,7 +73,6 @@ def main(page: ft.Page):
         padding=15, border_radius=12, gradient=ft.LinearGradient(colors=["#0F172A", "#1E1B4B"])
     )
 
-    # 4. Historial del Chat Principal
     chat_view = ft.ListView(expand=True, spacing=10, height=360)
     
     def cargar_bloque(rol, modo, texto):
@@ -85,48 +90,40 @@ def main(page: ft.Page):
 
     def pintar_bienvenida():
         chat_view.controls.clear()
-        chat_view.controls.append(cargar_bloque("ia", "Pensar", f"Detrás del ruidoso tráfico humano y los carteles de neón de la ciudad moderna, late un mundo oculto regido por la magia antigua, los estatutos del Velo Secreto y los decretos del Ministerio de Hechicería.\n\n📧 [SISTEMA DE GRIMORIO POR CORREO]:\nEscribe tu dirección de correo electrónico abajo en la barra de texto y dale a enviar para iniciar tu andadura o recuperar tu progreso guardado en el servidor:"))
+        chat_view.controls.append(cargar_bloque("ia", "Pensar", f"Detrás del ruidoso tráfico humano y los carteles de neón de la ciudad moderna, late un mundo oculto regido por la magia antigua, los estatutos del Velo Secreto y los decretos del Ministerio de Hechicería.\n\n📧 [SISTEMA DE GRIMORIO AUTOMÁTICO EN LA NUBE]:\nEscribe tu dirección de correo electrónico abajo en la barra de texto y dale a enviar para iniciar tu andadura o recuperar tu progreso guardado en el servidor:"))
     
     pintar_bienvenida()
-        # 5. Controles inferiores
+
     modo_radio = ft.RadioGroup(content=ft.Row([ft.Radio(value="Pensar", label="Narrar/Pensar"), ft.Radio(value="Hablar", label="Hablar")], alignment=ft.MainAxisAlignment.CENTER))
     modo_radio.value = "Pensar"
     input_texto = ft.TextField(hint_text="Introduce tu correo electrónico para empezar...", bgcolor="#111827", border_color="#1E293B", expand=True)
 
-    # 6. Lógica de ejecución de la IA al pulsar el botón
     def enviar_accion(e):
         nonlocal lore_partida_contenedor, stats, historial, inventario_contenedor
         if not input_texto.value: return
         txt = input_texto.value.strip()
         input_texto.value = ""
         
-        # MECÁNICA DE CARGA AUTOMÁTICA DETECTANDO EL CORREO ELECTRÓNICO (Contiene arroba y punto)
         if page.data["correo_usuario"] is None:
             if "@" in txt and "." in txt:
                 page.data["correo_usuario"] = txt
-                db_disco = leer_disco_duro()
+                partida_cargada = leer_nube_remota(txt)
                 
-                if txt in db_disco:
-                    partida_cargada = db_disco[txt]
+                if partida_cargada:
                     stats.clear()
                     stats.update(partida_cargada["stats"])
                     historial.clear()
                     historial.extend(partida_cargada["historial"])
-                    
-                    if "inventario" in partida_cargada:
-                        inventario_contenedor = [partida_cargada["inventario"]] if isinstance(partida_cargada["inventario"], str) else partida_cargada["inventario"]
-                    else:
-                        inventario_contenedor = ["Varita de Sauce, Toga Escolar"]
-                        
+                    inventario_contenedor = partida_cargada["inventario"]
                     lore_partida_contenedor = partida_cargada["lore"]
                     
                     chat_view.controls.clear()
                     for msg in historial:
                         chat_view.controls.append(cargar_bloque(msg.get("rol", "ia"), msg.get("modo", "Pensar"), msg.get("texto", "")))
                     
-                    chat_view.controls.append(cargar_bloque("ia", "Pensar", f"🔮 Vínculo establecido con {txt}. Tu historial de mensajes, monedas y mochila se han restaurado con éxito. Continúa tu aventura."))
+                    chat_view.controls.append(cargar_bloque("ia", "Pensar", f"🔮 Vínculo establecido con {txt}. Tu historial de mensajes, monedas y mochila se han descargado desde la nube con éxito. Continúa tu aventura."))
                 else:
-                    chat_view.controls.append(cargar_bloque("ia", "Pensar", f"✨ Correo {txt} registrado correctamente.\n\nTienes {stats['Dinero']}€ mágicos en tu monedero de cuero. Los callejones invisibles albergan mercados negros y boticarios oscuros. Todo tiene un precio.\n\nElige tu arquetipo místico escribiéndolo abajo para adentrarte en el mapa abierto: Mago Urbano, Detective, Cazador o Humano Despierto."))
+                    chat_view.controls.append(cargar_bloque("ia", "Pensar", f"✨ Correo [{txt}] registrado en la nube por primera vez.\n\nTienes {stats['Dinero']}€ mágicos en tu monedero de cuero. Los callejones invisibles albergan mercados negros y boticarios oscuros. Todo tiene un precio.\n\nElige tu arquetipo místico escribiéndolo abajo para adentrarte en el mapa abierto: Mago Urbano, Detective, Cazador o Humano Despierto."))
                 
                 reloj_label.value = f"⏳ RELOJ DE LA CRISIS: Quedan {stats['Dias']} días para el fin del Velo"
                 stats_text.value = f"❤️ {stats['Vida']}%  |  💰 {stats['Dinero']}€  |  🔮 {stats['Mana']}/30  |  ✨ {stats['EXP']}%"
@@ -140,7 +137,6 @@ def main(page: ft.Page):
                 page.update()
                 return
 
-        # FLUJO DE JUEGO NORMAL CON LA IA (Solo se activa si el usuario ya se ha validado con su correo)
         mod = modo_radio.value
         chat_view.controls.append(cargar_bloque("usuario", mod, txt))
         historial.append({"rol": "usuario", "modo": mod, "texto": txt})
@@ -155,7 +151,7 @@ def main(page: ft.Page):
         [RITMO DE APOCALIPSIS VARIABLE]
         La gran amenaza final que destruirá el Velo a los 30 días es: '{str(lore_partida_contenedor)}'. Decide si revelar este peligro inmediatamente o dejar caer pistas y rumores discretos de fondo.
         [REGLA DE ASIGNACIÓN CRÍTICA DE MARCADORES]
-        Al final de tu respuesta, debes evaluar las estadísticas del jugador. REGLA: Los datos que pongas sustituirán por completo a los anteriores. NO son incrementos, son los NUEVOS VALORES FIJOS.
+        Al final de tu respuesta, debes evaluar las estadísticas del jugador. REGLA: Los números que pongas en [ESTADÍSTICAS] sustituirán por completo a los anteriores. NO son incrementos, son los NUEVOS VALORES FIJOS.
         Valores actuales del jugador antes de tu turno: Vida={stats['Vida']}, Dinero={stats['Dinero']}, Mana={stats['Mana']}, EXP={stats['EXP']}, Dias={stats['Dias']}.
         Contenido actual de la Mochila: '{inventario_contenedor}'.
         AL FINAL ABSOLUTO de tu mensaje, incluye estrictamente estos tres bloques en este formato exacto:
@@ -172,13 +168,11 @@ def main(page: ft.Page):
         completion = client.chat.completions.create(model="llama-3.3-70b-versatile", messages=mensajes_api)
         raw_res = str(completion.choices[0].message.content)
         res_narrador = raw_res
-                # PROCESADOR SEGURO DE STRINGS PUROS (Inmune a fallos de listas)
-        if "[MEMORIA:" in raw_res:
+                if "[MEMORIA:" in raw_res:
             try:
                 idx_ini = raw_res.index("[MEMORIA:")
                 idx_fin = raw_res.index("]", idx_ini)
-                contenido_lore = raw_res[idx_ini + 9:idx_fin].replace('"', '').strip()
-                lore_partida_contenedor = [contenido_lore]
+                lore_partida_contenedor = [raw_res[idx_ini + 9:idx_fin].replace('"', '').strip()]
                 res_narrador = raw_res[:idx_ini].strip()
             except: pass
 
@@ -186,8 +180,7 @@ def main(page: ft.Page):
             try:
                 idx_ini = raw_res.index("[MOCHILA:")
                 idx_fin = raw_res.index("]", idx_ini)
-                contenido_inv = raw_res[idx_ini + 9:idx_fin].strip()
-                inventario_contenedor = [contenido_inv]
+                inventario_contenedor = [raw_res[idx_ini + 9:idx_fin].strip()]
                 if idx_ini < len(res_narrador):
                     res_narrador = raw_res[:idx_ini].strip()
             except: pass
@@ -215,7 +208,7 @@ def main(page: ft.Page):
         chat_view.controls.append(cargar_bloque("ia", "Pensar", res_narrador.strip()))
         historial.append({"rol": "ia", "texto": res_narrador.strip()})
         reloj_label.value = f"⏳ RELOJ DE LA CRISIS: Quedan {stats['Dias']} días para el fin del Velo"
-        hora_label.value = f"⏰ Tiempo Real: {datetime.now().strftime('%H:%M')} | {'🌌 TOQUE DE QUEDA' if (20 <= datetime.now().hour or datetime.now().hour <= 6) else '☀️ BAJO EL VELO'}"
+        hora_label.value = f"⏰ Tiempo Real: {datetime.now().strftime('%H:%M')} | ☀️ BAJO EL VELO"
         stats_text.value = f"❤️ {stats['Vida']}%  |  💰 {stats['Dinero']}€  |  🔮 {stats['Mana']}/30  |  ✨ {stats['EXP']}%"
         inventario_text.value = f"🎒 Mochila: {inventario_contenedor}"
         page.update()
@@ -223,11 +216,14 @@ def main(page: ft.Page):
     def abrir_menu_guardar(e):
         nonlocal lore_partida_contenedor, stats, historial, inventario_contenedor
         if page.data["correo_usuario"] is not None:
-            db_disco = leer_disco_duro()
-            db_disco[page.data["correo_usuario"]] = {"stats": stats, "historial": historial, "inventario": inventario_contenedor, "lore": lore_partida_contenedor}
-            escribir_disco_duro(db_disco)
-            btn_save.content.text = "✅ Guardado Real"
-            btn_save.bgcolor = "#10B981"
+            datos = {"stats": stats, "historial": historial, "inventario": inventario_contenedor, "lore": lore_partida_contenedor}
+            exito = escribir_nube_remota(page.data["correo_usuario"], datos)
+            if exito:
+                btn_save.content.text = "✅ Guardado en Nube"
+                btn_save.bgcolor = "#10B981"
+            else:
+                btn_save.content.text = "❌ Error de Red"
+                btn_save.bgcolor = "#EF4444"
             page.update()
         else:
             chat_view.controls.append(cargar_bloque("ia", "Pensar", "❌ Primero debes introducir tu correo electrónico en la barra inferior para poder registrar tu Grimorio."))
@@ -236,12 +232,7 @@ def main(page: ft.Page):
     def reiniciar(e):
         nonlocal lore_partida_contenedor, inventario_contenedor
         if page.data["correo_usuario"] is not None:
-            try:
-                db_disco = leer_disco_duro()
-                if page.data["correo_usuario"] in db_disco:
-                    del db_disco[page.data["correo_usuario"]]
-                    escribir_disco_duro(db_disco)
-            except: pass
+            borrar_nube_remota(page.data["correo_usuario"])
             
         stats["Vida"], stats["Dinero"], stats["Mana"], stats["EXP"], stats["Dias"] = 100, 50, 30, 0, 30
         inventario_contenedor = ["Varita de Sauce, Toga Escolar"]
@@ -250,7 +241,6 @@ def main(page: ft.Page):
         input_texto.hint_text = "Introduce tu correo electrónico para empezar..."
         nueva_semilla = random.choice(semillas_amenaza_final)
         lore_partida_contenedor = [f"Amenaza de extinción oculta elegida: {nueva_semilla}"]
-        chat_view.controls.clear()
         pintar_bienvenida()
         btn_save.content.text = "💾 Guardar Grimorio"
         btn_save.bgcolor = "#059669"
@@ -266,4 +256,3 @@ def main(page: ft.Page):
     page.add(ft.Column([ft.Row([ft.Text("🧙‍♂️ CRÓNICAS DEL VELO", size=14, weight=ft.FontWeight.BOLD, color="#9333EA"), ft.Row([btn_save, btn_reset], spacing=5)], alignment=ft.MainAxisAlignment.SPACE_BETWEEN), stat_container, ft.Divider(color="#1E293B"), chat_view, ft.Divider(color="#1E293B"), modo_radio, ft.Row([input_texto, btn_enviar])], expand=True))
 
 ft.app(target=main, view=ft.AppView.WEB_BROWSER, port=8000)
-        
