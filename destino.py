@@ -6,7 +6,7 @@ from datetime import datetime
 import json
 import urllib.request
 
-# CONEXIÓN BLINDADA A BASE DE DATOS EXTERNA GRATUITA (Inmune a los apagones de Render)
+# CONEXIÓN EN LA NUBE INDESTRUCTIBLE (Guarda las partidas de forma permanente)
 URL_DB = "https://mockapi.io"
 
 def cargar_datos_remotos(id_sesion):
@@ -22,8 +22,16 @@ def cargar_datos_remotos(id_sesion):
     except:
         return None
 
-def guardar_datos_remotos(id_sesion, stats, historial, lore, existe):
+def guardar_datos_remotos(id_sesion, stats, historial, lore):
     try:
+        # Comprobar primero si ya existe para decidir si hacer POST o PUT
+        existe = True
+        try:
+            req_check = urllib.request.Request(f"{URL_DB}/{id_sesion}", headers={'User-Agent': 'Mozilla/5.0'})
+            with urllib.request.urlopen(req_check, timeout=3) as r: pass
+        except:
+            existe = False
+
         payload = json.dumps({
             "id": id_sesion,
             "stats": json.dumps(stats),
@@ -37,8 +45,9 @@ def guardar_datos_remotos(id_sesion, stats, historial, lore, existe):
         req = urllib.request.Request(url_final, data=payload, headers={'Content-Type': 'application/json', 'User-Agent': 'Mozilla/5.0'}, method=metodo)
         with urllib.request.urlopen(req, timeout=5) as response:
             pass
+        return True
     except:
-        pass
+        return False
 
 def main(page: ft.Page):
     # 1. Configuración de pantalla estilo App Móvil Premium
@@ -51,11 +60,8 @@ def main(page: ft.Page):
     # Conexión segura con la IA de Groq en Render
     client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
 
-    # SOLUCIÓN DEFINITIVA A RESTRICCIONES DE SESIÓN: Creamos un ID aleatorio local blindado en el objeto page
-    if not hasattr(page, "_uid_movil_seguro"):
-        page._uid_movil_seguro = str(random.randint(10, 99))
-    
-    id_movil = page._uid_movil_seguro
+    # Fijamos el ID único "1" para tu grupo de juego en la base de datos externa
+    id_movil = "1"
 
     # Catálogo de amenazas límite para los 30 días reales
     semillas_amenaza_final = [
@@ -68,19 +74,16 @@ def main(page: ft.Page):
 
     # CARGA HISTÓRICA DESDE LA BASE DE DATOS EXTERNA DE INTERNET
     datos_remotos = cargar_datos_remotos(id_movil)
-    existe_partida = False
 
     if datos_remotos:
         stats = datos_remotos["stats"]
         historial = datos_remotos["historial"]
         lore_partida_contenedor = datos_remotos["lore_partida"]
-        existe_partida = True
     else:
         stats = {"Vida": 100, "Dinero": 50, "Mana": 30, "EXP": 0, "Dias": 30}
         historial = []
         semilla_inicial = random.choice(semillas_amenaza_final)
         lore_partida_contenedor = [f"Amenaza de extinción oculta elegida: {semilla_inicial}"]
-        guardar_datos_remotos(id_movil, stats, historial, lore_partida_contenedor, False)
 
     # Obtener el ciclo horario de 24 horas reales
     hora_actual_real = datetime.now().strftime("%H:%M")
@@ -113,20 +116,20 @@ def main(page: ft.Page):
             padding=14, border_radius=10, bgcolor="#111827"
         )
 
-    # Reconstruir el chat desde la base de datos externa remota
+    # Reconstruir el chat desde la base de datos remota
     if not historial:
         chat_view.controls.append(cargar_bloque("ia", "Pensar", f"Detrás del ruidoso tráfico humano y los carteles de neón de la ciudad moderna, late un mundo oculto regido por la magia antigua, los estatutos del Velo Secreto y los decretos del Ministerio de Hechicería. Quedan 30 días reales antes de que la crisis actual rompa el equilibrio.\n\n[SITUACIÓN ECONÓMICA Y ENTORNO]\nHora actual: {hora_actual_real} ({estado_dia_noche}).\nTienes {stats['Dinero']}€ mágicos en tu monedero de cuero. Los callejones invisibles albergan mercados negros, armerías de varitas, boticarios de maná y tabernas oscuras llenas de secretos. Todo tiene un precio, y nadie regala nada.\n\nElige tu arquetipo místico escribiéndolo abajo para adentrarte en el mapa abierto: Mago Urbano, Detective, Cazador o Humano Despierto."))
     else:
         for msg in historial:
             chat_view.controls.append(cargar_bloque(msg["rol"], msg.get("modo", "Pensar"), msg["texto"]))
-    # 5. Controles inferiores
+        # 5. Controles inferiores
     modo_radio = ft.RadioGroup(content=ft.Row([ft.Radio(value="Pensar", label="Narrar/Pensar"), ft.Radio(value="Hablar", label="Hablar")], alignment=ft.MainAxisAlignment.CENTER))
     modo_radio.value = "Pensar"
     input_texto = ft.TextField(hint_text="¿Qué dirección toma tu voluntad?", bgcolor="#111827", border_color="#1E293B", expand=True)
 
     # 6. Lógica de ejecución de la IA al pulsar el botón
     def enviar_accion(e):
-        nonlocal lore_partida_contenedor, existe_partida
+        nonlocal lore_partida_contenedor
         if not input_texto.value: return
         txt = input_texto.value
         mod = modo_radio.value
@@ -145,7 +148,7 @@ def main(page: ft.Page):
         [SISTEMA ECONÓMICO REAL Y COMERCIO PROFUNDO]
         - Gestionas una economía estricta. Todo tiene un precio real en Euros (€). No regales estadísticas ni dinero porque sí; ganar dinero debe ser difícil.
         - Despliega un abanico inmenso de TIENDAS MÍSTICAS según donde vaya el jugador: Armerías de varitas, boticarios de pociones, mercados negros de reliquias, tabernas mágicas, etc.
-        - Si el jugador compra un objeto, ponle un precio lógico detallado en el diálogo.
+        - Si el jugador compra un objeto, ponle un precio lógicos detallado en el diálogo.
         
         [RITMO DE APOCALIPSIS VARIABLE]
         La gran amenaza final que destruirá el Velo a los 30 días es: '{str(lore_partida_contenedor)}'. Decide si revelar este peligro inmediatamente o no según la situación.
@@ -197,13 +200,22 @@ def main(page: ft.Page):
         chat_view.controls.append(cargar_bloque("ia", "Pensar", res_narrador.strip()))
         historial.append({"rol": "ia", "texto": res_narrador.strip()})
         
-        # Guardado en internet indestructible
-        guardar_datos_remotos(id_movil, stats, historial, lore_partida_contenedor, existe_partida)
-        existe_partida = True
-        
         reloj_label.value = f"⏳ RELOJ DE LA CRISIS: Quedan {stats['Dias']} días para el fin del Velo"
         hora_label.value = f"⏰ Tiempo Real: {datetime.now().strftime('%H:%M')} | {'🌌 TOQUE DE QUEDA' if (20 <= datetime.now().hour or datetime.now().hour <= 6) else '☀️ BAJO EL VELO'}"
         stats_text.value = f"❤️ {stats['Vida']}%  |  💰 {stats['Dinero']}€  |  🔮 {stats['Mana']}/30  |  ✨ {stats['EXP']}%"
+        page.update()
+
+    # NUEVO: FUNCIÓN ASOCIADA AL BOTÓN FÍSICO DE GUARDAR GRIMORIO
+    def acc_guardar(e):
+        btn_save.content.text = "⏳ Sincronizando..."
+        page.update()
+        exito = guardar_datos_remotos(id_movil, stats, historial, lore_partida_contenedor)
+        if exito:
+            btn_save.content.text = "✅ Grimorio Salvado"
+            btn_save.bgcolor = "#10B981"
+        else:
+            btn_save.content.text = "❌ Error de Velo"
+            btn_save.bgcolor = "#EF4444"
         page.update()
 
     def reiniciar(e):
@@ -224,8 +236,10 @@ def main(page: ft.Page):
         lore_partida_contenedor = [f"Amenaza de extinción oculta elegida: {nueva_semilla}"]
         
         chat_view.controls.clear()
-        chat_view.controls.append(cargar_bloque("ia", "Pensar", f"Detrás del ruidoso tráfico humano y los carteles de neón de la ciudad moderna, late un mundo oculto regido por la magia antigua, los estatutos del Velo Secreto y los decretos del Ministerio de Hechicería. Quedan 30 días reales de estabilidad existencial antes de que un desastre irreversible arrastre este mundo al olvido.\n\n[SITUACIÓN ECONÓMICA Y ENTORNO]\nHora actual: {datetime.now().strftime('%H:%M')} . Los callejones invisibles albergan mercados negros, armerías de varitas, boticarios de maná y tabernas oscuras llenas de secretos. Todo tiene un precio.\n\nElige tu arquetipo maldito escribiéndolo abajo: Mago Urbano, Detective, Cazador o Humano Despierto."))
+        chat_view.controls.append(cargar_bloque("ia", "Pensar", f"Detrás del ruidoso tráfico humano y los carteles de neón de la ciudad moderna, late un world oculto regido por la magia antigua, los estatutos del Velo Secreto y los decretos del Ministerio de Hechicería. Quedan 30 días reales de estabilidad existencial antes de que un desastre irreversible arrastre este world al olvido.\n\n[SITUACIÓN ECONÓMICA Y ENTORNO]\nHora actual: {datetime.now().strftime('%H:%M')} . Los callejones invisibles albergan mercados negros, armerías de varitas, boticarios de maná y tabernas oscuras llenas de secretos. Todo tiene un precio.\n\nElige tu arquetipo maldito escribiéndolo abajo: Mago Urbano, Detective, Cazador o Humano Despierto."))
         
+        btn_save.content.text = "💾 Guardar Grimorio"
+        btn_save.bgcolor = "#059669"
         reloj_label.value = f"⏳ RELOJ DE LA CRISIS: Quedan {stats['Dias']} días para el fin del Velo"
         stats_text.value = f"❤️ {stats['Vida']}%  |  💰 {stats['Dinero']}€  |  🔮 {stats['Mana']}/30  |  ✨ {stats['EXP']}%"
         page.update()
@@ -235,15 +249,25 @@ def main(page: ft.Page):
         bgcolor="#6D28D9", on_click=enviar_accion, height=50
     )
     
+    # NUEVO: Botón místico verde para forzar el guardado manual de mensajes
+    btn_save = ft.ElevatedButton(
+        content=ft.Text("💾 Guardar Grimorio", color="white", weight=ft.FontWeight.BOLD),
+        bgcolor="#059669", on_click=acc_guardar
+    )
+
     btn_reset = ft.TextButton(
-        content=ft.Text("💀 Forzar Reinicio Absoluto", color="#EF4444", weight=ft.FontWeight.BOLD), on_click=reiniciar
+        content=ft.Text("💀 Reiniciar", color="#EF4444", weight=ft.FontWeight.BOLD), on_click=reiniciar
     )
 
     page.add(
         ft.Column([
-            ft.Row([ft.Text("🧙‍♂️ CRÓNICAS DEL VELO", size=15, weight=ft.FontWeight.BOLD, color="#9333EA"), btn_reset], alignment=ft.MainAxisAlignment.SPACE_BETWEEN), 
+            ft.Row([
+                ft.Text("🧙‍♂️ CRÓNICAS DEL VELO", size=14, weight=ft.FontWeight.BOLD, color="#9333EA"), 
+                ft.Row([btn_save, btn_reset], spacing=5)
+            ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN), 
             stat_container, ft.Divider(color="#1E293B"), chat_view, ft.Divider(color="#1E293B"), modo_radio, ft.Row([input_texto, btn_enviar])
         ], expand=True)
     )
 
 ft.app(target=main, view=ft.AppView.WEB_BROWSER, port=8000)
+        
