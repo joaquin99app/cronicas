@@ -172,11 +172,13 @@ def main(page: ft.Page):
         completion = client.chat.completions.create(model="llama-3.3-70b-versatile", messages=mensajes_api)
         raw_res = str(completion.choices[0].message.content)
         res_narrador = raw_res
-                if "[MEMORIA:" in raw_res:
+                # PROCESADOR SEGURO DE STRINGS PUROS (Inmune a fallos de listas)
+        if "[MEMORIA:" in raw_res:
             try:
                 idx_ini = raw_res.index("[MEMORIA:")
                 idx_fin = raw_res.index("]", idx_ini)
-                lore_partida_contenedor = [raw_res[idx_ini + 9:idx_fin].replace('"', '').strip()]
+                contenido_lore = raw_res[idx_ini + 9:idx_fin].replace('"', '').strip()
+                lore_partida_contenedor = [contenido_lore]
                 res_narrador = raw_res[:idx_ini].strip()
             except: pass
 
@@ -184,7 +186,8 @@ def main(page: ft.Page):
             try:
                 idx_ini = raw_res.index("[MOCHILA:")
                 idx_fin = raw_res.index("]", idx_ini)
-                inventario_contenedor = [raw_res[idx_ini + 9:idx_fin].strip()]
+                contenido_inv = raw_res[idx_ini + 9:idx_fin].strip()
+                inventario_contenedor = [contenido_inv]
                 if idx_ini < len(res_narrador):
                     res_narrador = raw_res[:idx_ini].strip()
             except: pass
@@ -263,3 +266,4 @@ def main(page: ft.Page):
     page.add(ft.Column([ft.Row([ft.Text("🧙‍♂️ CRÓNICAS DEL VELO", size=14, weight=ft.FontWeight.BOLD, color="#9333EA"), ft.Row([btn_save, btn_reset], spacing=5)], alignment=ft.MainAxisAlignment.SPACE_BETWEEN), stat_container, ft.Divider(color="#1E293B"), chat_view, ft.Divider(color="#1E293B"), modo_radio, ft.Row([input_texto, btn_enviar])], expand=True))
 
 ft.app(target=main, view=ft.AppView.WEB_BROWSER, port=8000)
+        
