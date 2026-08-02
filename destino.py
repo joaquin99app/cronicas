@@ -60,8 +60,8 @@ def main(page: ft.Page):
     # Conexión segura con la IA de Groq en Render
     client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
 
-    # Fijamos el ID único "1" para tu grupo de juego en la base de datos externa
-    id_movil = "1"
+    # Fijamos el ID único permanente de tu juego
+    id_id = "1"
 
     # Catálogo de amenazas límite para los 30 días reales
     semillas_amenaza_final = [
@@ -73,7 +73,7 @@ def main(page: ft.Page):
     ]
 
     # CARGA HISTÓRICA DESDE LA BASE DE DATOS EXTERNA DE INTERNET
-    datos_remotos = cargar_datos_remotos(id_movil)
+    datos_remotos = cargar_datos_remotos(id_id)
 
     if datos_remotos:
         stats = datos_remotos["stats"]
@@ -118,11 +118,11 @@ def main(page: ft.Page):
 
     # Reconstruir el chat desde la base de datos remota
     if not historial:
-        chat_view.controls.append(cargar_bloque("ia", "Pensar", f"Detrás del ruidoso tráfico humano y los carteles de neón de la ciudad moderna, late un mundo oculto regido por la magia antigua, los estatutos del Velo Secreto y los decretos del Ministerio de Hechicería. Quedan 30 días reales antes de que la crisis actual rompa el equilibrio.\n\n[SITUACIÓN ECONÓMICA Y ENTORNO]\nHora actual: {hora_actual_real} ({estado_dia_noche}).\nTienes {stats['Dinero']}€ mágicos en tu monedero de cuero. Los callejones invisibles albergan mercados negros, armerías de varitas, boticarios de maná y tabernas oscuras llenas de secretos. Todo tiene un precio, y nadie regala nada.\n\nElige tu arquetipo místico escribiéndolo abajo para adentrarte en el mapa abierto: Mago Urbano, Detective, Cazador o Humano Despierto."))
+        chat_view.controls.append(cargar_bloque("ia", "Pensar", f"Detrás del ruidoso tráfico humano y los carteles de neón de la ciudad moderna, late un world oculto regido por la magia antigua, los estatutos del Velo Secreto y los decretos del Ministerio de Hechicería. Quedan 30 días reales antes de que la crisis actual rompa el equilibrio.\n\n[SITUACIÓN ECONÓMICA Y ENTORNO]\nHora actual: {hora_actual_real} ({estado_dia_noche}).\nTienes {stats['Dinero']}€ mágicos en tu monedero de cuero. Los callejones invisibles albergan mercados negros, armerías de varitas, boticarios de maná y tabernas oscuras llenas de secretos. Todo tiene un precio, y nadie regala nada.\n\nElige tu arquetipo místico escribiéndolo abajo para adentrarte en el mapa abierto: Mago Urbano, Detective, Cazador o Humano Despierto."))
     else:
         for msg in historial:
             chat_view.controls.append(cargar_bloque(msg["rol"], msg.get("modo", "Pensar"), msg["texto"]))
-        # 5. Controles inferiores
+                # 5. Controles inferiores
     modo_radio = ft.RadioGroup(content=ft.Row([ft.Radio(value="Pensar", label="Narrar/Pensar"), ft.Radio(value="Hablar", label="Hablar")], alignment=ft.MainAxisAlignment.CENTER))
     modo_radio.value = "Pensar"
     input_texto = ft.TextField(hint_text="¿Qué dirección toma tu voluntad?", bgcolor="#111827", border_color="#1E293B", expand=True)
@@ -148,7 +148,7 @@ def main(page: ft.Page):
         [SISTEMA ECONÓMICO REAL Y COMERCIO PROFUNDO]
         - Gestionas una economía estricta. Todo tiene un precio real en Euros (€). No regales estadísticas ni dinero porque sí; ganar dinero debe ser difícil.
         - Despliega un abanico inmenso de TIENDAS MÍSTICAS según donde vaya el jugador: Armerías de varitas, boticarios de pociones, mercados negros de reliquias, tabernas mágicas, etc.
-        - Si el jugador compra un objeto, ponle un precio lógicos detallado en el diálogo.
+        - Si el jugador compra un objeto, ponle un precio lógico detallado en el diálogo.
         
         [RITMO DE APOCALIPSIS VARIABLE]
         La gran amenaza final que destruirá el Velo a los 30 días es: '{str(lore_partida_contenedor)}'. Decide si revelar este peligro inmediatamente o no según la situación.
@@ -170,22 +170,22 @@ def main(page: ft.Page):
             mensajes.append({"role": "user" if msg["rol"] == "usuario" else "assistant", "content": msg["texto"]})
 
         completion = client.chat.completions.create(model="llama-3.3-70b-versatile", messages=mensajes)
-        raw_res = str(completion.choices[0].message.content)
+        raw_res = str(completion.choices.message.content)
 
         res_narrador = raw_res
         
         if "[MEMORIA:" in raw_res:
             partes_lore = raw_res.split("[MEMORIA:")
-            res_narrador = partes_lore[0]
-            contenido_lore = partes_lore[1].replace("]", "").replace('"', '').strip()
+            res_narrador = partes_lore
+            contenido_lore = partes_lore.replace("]", "").replace('"', '').strip()
             lore_partida_contenedor = [contenido_lore]
 
         if "[ESTADÍSTICAS:" in raw_res:
             partes_cambios = raw_res.split("[ESTADÍSTICAS:")
-            if "[MEMORIA:" not in partes_cambios[0]:
-                res_narrador = partes_cambios[0]
+            if "[MEMORIA:" not in partes_cambios:
+                res_narrador = partes_cambios
             
-            cambios_str = partes_cambios[1].split("]")[0].strip()
+            cambios_str = partes_cambios.split("]").strip()
             for cambio in cambios_str.split(","):
                 try:
                     clave, valor = cambio.split("=")
@@ -205,11 +205,11 @@ def main(page: ft.Page):
         stats_text.value = f"❤️ {stats['Vida']}%  |  💰 {stats['Dinero']}€  |  🔮 {stats['Mana']}/30  |  ✨ {stats['EXP']}%"
         page.update()
 
-    # NUEVO: FUNCIÓN ASOCIADA AL BOTÓN FÍSICO DE GUARDAR GRIMORIO
+    # CORRECCIÓN DE PALABRA CLAVE: Sincronización real con el identificador id_id de internet
     def acc_guardar(e):
         btn_save.content.text = "⏳ Sincronizando..."
         page.update()
-        exito = guardar_datos_remotos(id_movil, stats, historial, lore_partida_contenedor)
+        exito = guardar_datos_remotos(id_id, stats, historial, lore_partida_contenedor)
         if exito:
             btn_save.content.text = "✅ Grimorio Salvado"
             btn_save.bgcolor = "#10B981"
@@ -221,7 +221,7 @@ def main(page: ft.Page):
     def reiniciar(e):
         Metodo_Borrar = "DELETE"
         try:
-            req = urllib.request.Request(f"{URL_DB}/{id_movil}", headers={'User-Agent': 'Mozilla/5.0'}, method=Metodo_Borrar)
+            req = urllib.request.Request(f"{URL_DB}/{id_id}", headers={'User-Agent': 'Mozilla/5.0'}, method=Metodo_Borrar)
             with urllib.request.urlopen(req, timeout=5) as response: pass
         except: pass
             
@@ -249,7 +249,6 @@ def main(page: ft.Page):
         bgcolor="#6D28D9", on_click=enviar_accion, height=50
     )
     
-    # NUEVO: Botón místico verde para forzar el guardado manual de mensajes
     btn_save = ft.ElevatedButton(
         content=ft.Text("💾 Guardar Grimorio", color="white", weight=ft.FontWeight.BOLD),
         bgcolor="#059669", on_click=acc_guardar
@@ -270,4 +269,3 @@ def main(page: ft.Page):
     )
 
 ft.app(target=main, view=ft.AppView.WEB_BROWSER, port=8000)
-        
