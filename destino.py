@@ -89,7 +89,8 @@ def main(page: ft.Page):
         chat_view.controls.append(cargar_bloque("ia", "Pensar", f"Detrás del ruidoso tráfico humano y los carteles de neón de la ciudad moderna, late un mundo oculto regido por la magia antigua, los estatutos del Velo Secreto y los decretos del Ministerio de Hechicería. Quedan 30 días reales antes de que la crisis actual rompa el equilibrio.\n\n[SITUACIÓN ECONÓMICA Y ENTORNO]\nHora actual: {hora_actual_real} ({estado_dia_noche}).\nTienes {stats['Dinero']}€ mágicos en tu monedero de cuero. Los callejones invisibles albergan mercados negros, armerías de varitas y boticarios clandestinos. Todo tiene un precio.\n\nSISTEMA DE RECUPERACIÓN: Si tenías una partida anterior, escribe tu PIN numérico de 3 cifras abajo en la barra y dale a enviar para recuperar tus mensajes e inventario. Si eres nuevo, escribe tu arquetipo para empezar: Mago Urbano, Detective, Cazador o Humano Despierto."))
     
     pintar_bienvenida()
-        # 5. Controles inferiores
+                    
+    # 5. Controles inferiores
     modo_radio = ft.RadioGroup(content=ft.Row([ft.Radio(value="Pensar", label="Narrar/Pensar"), ft.Radio(value="Hablar", label="Hablar")], alignment=ft.MainAxisAlignment.CENTER))
     modo_radio.value = "Pensar"
     input_texto = ft.TextField(hint_text="¿Qué dirección toma tu voluntad? (O pon tu PIN para cargar)", bgcolor="#111827", border_color="#1E293B", expand=True)
@@ -109,9 +110,15 @@ def main(page: ft.Page):
                 partida_cargada = db_disco[txt]
                 stats = partida_cargada["stats"]
                 historial = partida_cargada["historial"]
-                inventario = [partida_cargada.get("inventario", "Varita de Sauce, Toga Escolar")] if "inventario" in partida_cargada else [partida_cargada.get("inventario_text", "Varita de Sauce, Toga Escolar")] if "inventario_text" in partida_cargada else [partida_cargada["inventario"]] if isinstance(partida_cargada.get("inventario"), str) else partida_cargada.get("inventario", ["Varita de Sauce, Toga Escolar"])
+                
+                # CORRECCIÓN DE SINTAXIS BLINDADA DE LA MOCHILA AQUÍ:
+                if "inventario" in partida_cargada:
+                    inventario = partida_cargada["inventario"]
+                else:
+                    inventario = ["Varita de Sauce, Toga Escolar"]
+                    
                 lore_partida_contenedor = partida_cargada["lore"]
-                pin_activo[0] = txt
+                pin_activo = txt
                 
                 # Reconstruir visualmente la pantalla con los mensajes viejos recuperados
                 chat_view.controls.clear()
@@ -134,7 +141,8 @@ def main(page: ft.Page):
         chat_view.controls.append(cargar_bloque("usuario", mod, txt))
         historial.append({"rol": "usuario", "modo": mod, "texto": txt})
         page.update()
-                prompt_sistema = f"""
+
+        prompt_sistema = f"""
         Actúa como el Game Master de un RPG conversacional de Fantasía Urbana Contemporánea. Tu estilo es denso, literario y profundamente descriptivo.
         [SISTEMA ECONÓMICO REAL Y COMERCIO PROFUNDO]
         - Gestionas una economía estricta. Todo tiene un precio real en Euros (€). No regales dinero ni objetos de valor porque sí.
@@ -208,7 +216,6 @@ def main(page: ft.Page):
         db_disco = leer_disco_duro()
         db_disco[pin] = {"stats": stats, "historial": historial, "inventario": inventario, "lore": lore_partida_contenedor}
         escribir_disco_duro(db_disco)
-        pin_activo[0] = pin
         page.dialog.open = False
         btn_save.content.text = f"✅ Guardado en PIN {pin}"
         btn_save.bgcolor = "#10B981"
@@ -218,23 +225,15 @@ def main(page: ft.Page):
     dialogo_guardar = ft.AlertDialog(title=ft.Text("💾 Sellar Grimorio"), content=input_pin, actions=[ft.ElevatedButton("🔮 Grabar en Disco", on_click=confirmar_pin_guardado)])
 
     def abrir_menu_guardar(e):
-        if pin_activo[0] is not None:
-            db_disco = leer_disco_duro()
-            db_disco[pin_activo[0]] = {"stats": stats, "historial": historial, "inventario": inventario, "lore": lore_partida_contenedor}
-            escribir_disco_duro(db_disco)
-            btn_save.content.text = f"✅ Actualizado PIN {pin_activo[0]}"
-            page.update()
-        else:
-            page.dialog = dialogo_guardar
-            dialogo_guardar.open = True
-            page.update()
+        page.dialog = dialogo_guardar
+        dialogo_guardar.open = True
+        page.update()
 
     def reiniciar(e):
         nonlocal lore_partida_contenedor, inventario
         stats["Vida"], stats["Dinero"], stats["Mana"], stats["EXP"], stats["Dias"] = 100, 50, 30, 0, 30
         inventario = ["Varita de Sauce, Toga Escolar"]
         historial.clear()
-        pin_activo[0] = None
         nueva_semilla = random.choice(semillas_amenaza_final)
         lore_partida_contenedor = [f"Amenaza de extinción oculta elegida: {nueva_semilla}"]
         pintar_bienvenida()
@@ -246,10 +245,11 @@ def main(page: ft.Page):
         page.update()
 
     btn_enviar = ft.ElevatedButton(content=ft.Text("🚀 ALTERAR EL DESTINO", color="white", weight=ft.FontWeight.BOLD), bgcolor="#6D28D9", on_click=enviar_accion, height=50)
-    btn_save = ft.ElevatedButton(content=ft.Text("💾 Guardar Grimorio", color="white", weight=ft.FontWeight.BOLD), bgcolor="#059669", on_click=abrir_menu_guardar)
+    btn_save = ft.ElevatedButton(content=ft.Text("💾 Guardar Grimorio", color="white", weight=ft.FontWeight.BOLD), bgcolor="#059669", on_click=opening_menu := abrir_menu_guardar)
     btn_reset = ft.TextButton(content=ft.Text("💀 Reiniciar", color="#EF4444", weight=ft.FontWeight.BOLD), on_click=reiniciar)
 
     page.add(ft.Column([ft.Row([ft.Text("🧙‍♂️ CRÓNICAS DEL VELO", size=14, weight=ft.FontWeight.BOLD, color="#9333EA"), ft.Row([btn_save, btn_reset], spacing=5)], alignment=ft.MainAxisAlignment.SPACE_BETWEEN), stat_container, ft.Divider(color="#1E293B"), chat_view, ft.Divider(color="#1E293B"), modo_radio, ft.Row([input_texto, btn_enviar])], expand=True))
 
 ft.app(target=main, view=ft.AppView.WEB_BROWSER, port=8000)
+
         
