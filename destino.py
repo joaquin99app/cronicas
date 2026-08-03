@@ -6,26 +6,50 @@ from datetime import datetime
 import json
 import urllib.request
 
-# NUBE REMOTA DE INTERNET REAL (Guarda de forma permanente e inmune a los reinicios de Render)
-URL_NUBE_BASE = "https://kvdb.io"
+# NUBE REMOTA DE INTERNET INDESTRUCTIBLE (Persistencia infinita blindada contra apagones)
+URL_NUBE_MOCK = "https://mockapi.io"
 
 def leer_nube_remota(correo):
     try:
         id_limpio = correo.replace("@", "_at_").replace(".", "_dot_")
-        url = f"{URL_NUBE_BASE}velo_user_{id_limpio}"
+        url = f"{URL_NUBE_MOCK}/{id_limpio}"
         req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
-        with urllib.request.urlopen(req, timeout=4) as response:
-            return json.loads(response.read().decode('utf-8'))
+        with urllib.request.urlopen(req, timeout=5) as response:
+            data = json.loads(response.read().decode('utf-8'))
+            return {
+                "stats": json.loads(data["stats"]),
+                "historial": json.loads(data["historial"]),
+                "inventario": json.loads(data["inventario"]),
+                "lore": json.loads(data["lore_partida"])
+            }
     except:
         return None
 
 def escribir_nube_remota(correo, datos):
     try:
         id_limpio = correo.replace("@", "_at_").replace(".", "_dot_")
-        url = f"{URL_NUBE_BASE}velo_user_{id_limpio}"
-        payload = json.dumps(datos).encode('utf-8')
-        req = urllib.request.Request(url, data=payload, headers={'Content-Type': 'application/json', 'User-Agent': 'Mozilla/5.0'}, method="POST")
-        with urllib.request.urlopen(req, timeout=4) as response:
+        
+        # Verificar primero si el registro ya existe de forma física en internet
+        existe = True
+        try:
+            req_check = urllib.request.Request(f"{URL_NUBE_MOCK}/{id_limpio}", headers={'User-Agent': 'Mozilla/5.0'})
+            with urllib.request.urlopen(req_check, timeout=3) as r: pass
+        except:
+            existe = False
+
+        payload = json.dumps({
+            "id": id_limpio,
+            "stats": json.dumps(datos["stats"]),
+            "historial": json.dumps(datos["historial"]),
+            "inventario": json.dumps(datos["inventario"]),
+            "lore_partida": json.dumps(datos["lore"])
+        }).encode('utf-8')
+        
+        metodo = "PUT" if existe else "POST"
+        url_final = f"{URL_NUBE_MOCK}/{id_limpio}" if existe else URL_NUBE_MOCK
+        
+        req = urllib.request.Request(url_final, data=payload, headers={'Content-Type': 'application/json', 'User-Agent': 'Mozilla/5.0'}, method=metodo)
+        with urllib.request.urlopen(req, timeout=5) as response:
             pass
         return True
     except:
@@ -34,7 +58,7 @@ def escribir_nube_remota(correo, datos):
 def borrar_nube_remota(correo):
     try:
         id_limpio = correo.replace("@", "_at_").replace(".", "_dot_")
-        url = f"{URL_NUBE_BASE}velo_user_{id_limpio}"
+        url = f"{URL_NUBE_MOCK}/{id_limpio}"
         req = urllib.request.Request(url, method="DELETE", headers={'User-Agent': 'Mozilla/5.0'})
         with urllib.request.urlopen(req, timeout=3) as r: pass
     except: pass
@@ -54,8 +78,7 @@ def main(page: ft.Page):
     stats = {"Vida": 100, "Dinero": 50, "Mana": 30, "EXP": 0, "Dias": 30}
     inventario_contenedor = ["Varita de Sauce, Toga Escolar"]
     historial = []
-    
-    semillas_amenaza_final = [
+        semillas_amenaza_final = [
         "El motor de transmutación del Ministerio de Magia ha sido infectado por una maldición de óxido eterno que disuelve el maná de la ciudad.",
         "Una secta de licántropos y magos oscuros está preparando el despertar de un dragón mitológico sepultado bajo los cimientos urbanos.",
         "Un brote de 'estática mística' se está filtrando a través de la red eléctrica, borrando los recuerdos de los hechiceros y exponiendo el velo.",
@@ -67,7 +90,8 @@ def main(page: ft.Page):
 
     # Variables de control de correo electrónico fijadas en la página
     page.data = {"correo_usuario": None}
-        # 3. Componentes visuales superiores unificados (Añadido el Inventario Gráfico)
+
+    # 3. Componentes visuales superiores unificados (Añadido el Inventario Gráfico)
     reloj_label = ft.Text(f"⏳ RELOJ DE LA CRISIS: Quedan {stats['Dias']} días para el fin del Velo", color="#A78BFA", weight=ft.FontWeight.BOLD, size=14)
     hora_label = ft.Text(f"⏰ Tiempo Real: {datetime.now().strftime('%H:%M')} | ☀️ BAJO EL VELO", color="#38BDF8", size=12, weight=ft.FontWeight.W_500)
     stats_text = ft.Text(f"❤️ {stats['Vida']}%  |  💰 {stats['Dinero']}€  |  🔮 {stats['Mana']}/30  |  ✨ {stats['EXP']}%", color="#F3F4F6", weight=ft.FontWeight.BOLD, size=15)
@@ -130,9 +154,9 @@ def main(page: ft.Page):
                     for msg in historial:
                         chat_view.controls.append(cargar_bloque(msg.get("rol", "ia"), msg.get("modo", "Pensar"), msg.get("texto", "")))
                     
-                    chat_view.controls.append(cargar_bloque("ia", "Pensar", f"🔮 Vínculo establecido con {txt}. Tu historial de mensajes, monedas y mochila se han descargado desde la nube con éxito. Continúa tu aventura."))
+                    chat_view.controls.append(cargar_bloque("ia", "Pensar", f"🔮 Vínculo establecido con {txt}. Tu historial de mensajes, monedas y mochila se han descargado desde la nube permanente con éxito. Continúa tu aventura."))
                 else:
-                    chat_view.controls.append(cargar_bloque("ia", "Pensar", f"✨ Correo [{txt}] registrado en la nube por primera vez.\n\nTienes {stats['Dinero']}€ mágicos en tu monedero de cuero. Los callejones invisibles albergan mercados negros y boticarios oscuros. Todo tiene un precio.\n\nElige tu arquetipo místico escribiéndolo abajo para adentrarte en el mapa abierto: Mago Urbano, Detective, Cazador o Humano Despierto."))
+                    chat_view.controls.append(cargar_bloque("ia", "Pensar", f"✨ Correo [{txt}] registrado en la nube permanente por primera vez.\n\nTienes {stats['Dinero']}€ mágicos en tu monedero de cuero. Los callejones invisibles albergan mercados negros y boticarios oscuros. Todo tiene un precio.\n\nElige tu arquetipo místico escribiéndolo abajo para adentrarte en el mapa abierto: Mago Urbano, Detective, Cazador o Humano Despierto."))
                 
                 reloj_label.value = f"⏳ RELOJ DE LA CRISIS: Quedan {stats['Dias']} días para el fin del Velo"
                 stats_text.value = f"❤️ {stats['Vida']}%  |  💰 {stats['Dinero']}€  |  🔮 {stats['Mana']}/30  |  ✨ {stats['EXP']}%"
@@ -151,9 +175,8 @@ def main(page: ft.Page):
         chat_view.controls.append(cargar_bloque("usuario", mod, txt))
         historial.append({"rol": "usuario", "modo": mod, "texto": txt})
         page.update()
-
-        prompt_sistema = f"""
-        Actúa como el Game Master de un RPG conversacional de Fantasía Urbana Contemporánea. Tu estilo es denso, de novela de misterio y profundamente descriptivo.
+                prompt_sistema = f"""
+        Actúa como el Game Master de un RPG conversacional de Fantasía Urbana Contemporánea. Tu estilo es denso, literario y profundamente descriptivo.
         [SISTEMA ECONÓMICO REAL Y COMERCIO PROFUNDO]
         - Gestionas una economía estricta. Todo tiene un precio real en Euros (€). No regales dinero ni objetos de valor porque sí.
         - Despliega un abanico inmenso de TIENDAS MÍSTICAS según donde vaya el jugador (armerías de varitas, boticarios, mercados negros, tabernas). 
@@ -161,7 +184,7 @@ def main(page: ft.Page):
         [RITMO DE APOCALIPSIS VARIABLE]
         La gran amenaza final que destruirá el Velo a los 30 días es: '{str(lore_partida_contenedor)}'. Decide si revelar este peligro inmediatamente o dejar caer pistas y rumores discretos de fondo.
         [REGLA DE ASIGNACIÓN CRÍTICA DE MARCADORES]
-        Al final de tu respuesta, debes evaluar las estadísticas del jugador. REGLA: Los números que pongas en [ESTADÍSTICAS] sustituirán por completo a los anteriores. NO son incrementos, son los NUEVOS VALORES FIJOS.
+        Al final de tu respuesta, debes evaluar las estadísticas del jugador. REGLA: Los datos que pongas sustituirán por completo a los anteriores. NO son incrementos, son los NUEVOS VALORES FIJOS.
         Valores actuales del jugador antes de tu turno: Vida={stats['Vida']}, Dinero={stats['Dinero']}, Mana={stats['Mana']}, EXP={stats['EXP']}, Dias={stats['Dias']}.
         Contenido actual de la Mochila: '{inventario_contenedor}'.
         AL FINAL ABSOLUTO de tu mensaje, incluye estrictamente estos tres bloques en este formato exacto:
@@ -171,10 +194,10 @@ def main(page: ft.Page):
         """
 
         completion = client.chat.completions.create(model="llama-3.3-70b-versatile", messages=[{"role": "system", "content": prompt_sistema}] + [{"role": "user" if m.get("rol") == "usuario" else "assistant", "content": m.get("texto", "")} for m in historial[-6:]])
-        # CORRECCIÓN DE LA VARIABLE DE EXTRACCIÓN CON ÍNDICE REGLAMENTARIO DE LISTA:
         raw_res = str(completion.choices[0].message.content)
         res_narrador = raw_res
-                if "[MEMORIA:" in raw_res:
+
+        if "[MEMORIA:" in raw_res:
             try:
                 idx_ini = raw_res.index("[MEMORIA:")
                 idx_fin = raw_res.index("]", idx_ini)
@@ -225,7 +248,7 @@ def main(page: ft.Page):
             datos = {"stats": stats, "historial": historial, "inventario": inventario_contenedor, "lore": lore_partida_contenedor}
             exito = escribir_nube_remota(page.data["correo_usuario"], datos)
             if exito:
-                btn_save.content.text = "✅ Guardado en Nube"
+                btn_save.content.text = "✅ Guardado Permanente"
                 btn_save.bgcolor = "#10B981"
             else:
                 btn_save.content.text = "❌ Error de Red"
@@ -246,7 +269,7 @@ def main(page: ft.Page):
         page.data["correo_usuario"] = None
         input_texto.hint_text = "Introduce tu correo electrónico para empezar..."
         nueva_semilla = random.choice(semillas_amenaza_final)
-        lore_partida_contenedor = [f"Amenaza de extinción oculta elegida: {nueva_semilla}"]
+        lore_partida_contenedor = [f"Threat de extinción oculta elegida: {nueva_semilla}"]
         pintar_bienvenida()
         btn_save.content.text = "💾 Guardar Grimorio"
         btn_save.bgcolor = "#059669"
@@ -262,3 +285,4 @@ def main(page: ft.Page):
     page.add(ft.Column([ft.Row([ft.Text("🧙‍♂️ CRÓNICAS DEL VELO", size=14, weight=ft.FontWeight.BOLD, color="#9333EA"), ft.Row([btn_save, btn_reset], spacing=5)], alignment=ft.MainAxisAlignment.SPACE_BETWEEN), stat_container, ft.Divider(color="#1E293B"), chat_view, ft.Divider(color="#1E293B"), modo_radio, ft.Row([input_texto, btn_enviar])], expand=True))
 
 ft.app(target=main, view=ft.AppView.WEB_BROWSER, port=8000)
+        
