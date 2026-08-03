@@ -54,8 +54,7 @@ def borrar_nube_remota(correo):
         req = urllib.request.Request(url, method="DELETE", headers={'User-Agent': 'Mozilla/5.0'})
         with urllib.request.urlopen(req, timeout=3) as r: pass
     except: pass
-
-def main(page: ft.Page):
+        def main(page: ft.Page):
     page.title = "🚨 Crónicas del Velo Mágico"
     page.bgcolor = "#05070B"
     page.theme_mode = ft.ThemeMode.DARK
@@ -88,7 +87,8 @@ def main(page: ft.Page):
         padding=15, border_radius=12, gradient=ft.LinearGradient(colors=["#0F172A", "#1E1B4B"])
     )
     chat_view = ft.ListView(expand=True, spacing=10, height=360)
-        def cargar_bloque(rol, modo, texto):
+    
+    def cargar_bloque(rol, modo, texto):
         if rol == "usuario":
             bg = "#0F172A" if modo == "Pensar" else "#022C22"
             lbl = "💭 Pensasíntesis: " if modo == "Pensar" else "🗣️ Voz Alta: "
@@ -103,7 +103,6 @@ def main(page: ft.Page):
     modo_radio = ft.RadioGroup(content=ft.Row([ft.Radio(value="Pensar", label="Narrar/Pensar"), ft.Radio(value="Hablar", label="Hablar")], alignment=ft.MainAxisAlignment.CENTER))
     modo_radio.value = "Pensar"
     input_texto = ft.TextField(hint_text="Introduce tu correo electrónico para empezar...", bgcolor="#111827", border_color="#1E293B", expand=True)
-
     def enviar_accion(e):
         nonlocal lore_partida_contenedor, stats, historial, inventario_contenedor
         if not input_texto.value: return
@@ -121,9 +120,9 @@ def main(page: ft.Page):
                     lore_partida_contenedor = partida_cargada["lore"]
                     chat_view.controls.clear()
                     for msg in historial: chat_view.controls.append(cargar_bloque(msg.get("rol", "ia"), msg.get("modo", "Pensar"), msg.get("texto", "")))
-                    chat_view.controls.append(cargar_bloque("ia", "Pensar", f"🔮 Vínculo establecido con {txt}. Tu progreso e historial se han sincronizado con éxito."))
+                    chat_view.controls.append(cargar_bloque("ia", "Pensar", f"🔮 Vínculo establecido con {txt}. Tu progreso e historial se han sincronizado con éxito. Continúa tu aventura."))
                 else:
-                    chat_view.controls.append(cargar_bloque("ia", "Pensar", f"✨ Correo [{txt}] registrado. Elige tu arquetipo místico escribiéndolo abajo para empezar: Mago Urbano, Detective, Cazador o Humano Despierto."))
+                    chat_view.controls.append(cargar_bloque("ia", "Pensar", f"✨ Correo [{txt}] registrado en la nube permanente por primera vez.\n\nTienes {stats['Dinero']}€ mágicos en tu monedero de cuero. Los callejones invisibles albergan mercados negros y boticarios oscuros. Todo tiene un precio.\n\nElige tu arquetipo místico escribiéndolo abajo para adentrarte en el mapa abierto: Mago Urbano, Detective, Cazador o Humano Despierto."))
                 reloj_label.value = f"⏳ RELOJ DE LA CRISIS: Quedan {stats['Dias']} días para el fin del Velo"
                 stats_text.value = f"❤️ {stats['Vida']}%  |  💰 {stats['Dinero']}€  |  🔮 {stats['Mana']}/30  |  ✨ {stats['EXP']}%"
                 inventario_text.value = f"🎒 Mochila: {inventario_contenedor}"
@@ -193,10 +192,10 @@ def main(page: ft.Page):
             datos = {"stats": stats, "historial": historial, "inventario": inventario_contenedor, "lore": lore_partida_contenedor}
             exito = escribir_nube_remota(page.data["correo_usuario"], datos)
             if exito:
-                btn_save.content.text = "Permanent Saved"
+                btn_save.content.text = "✅ Guardado Permanente"
                 btn_save.bgcolor = "#10B981"
             else:
-                btn_save.content.text = "Network Error"; btn_save.bgcolor = "#EF4444"
+                btn_save.content.text = "❌ Error de Red"; btn_save.bgcolor = "#EF4444"
             page.update()
         else:
             chat_view.controls.append(cargar_bloque("ia", "Pensar", "❌ Primero introduce tu correo electrónico abajo."))
@@ -223,4 +222,4 @@ def main(page: ft.Page):
     btn_reset = ft.TextButton(content=ft.Text("💀 Reiniciar", color="#EF4444", weight=ft.FontWeight.BOLD), on_click=reiniciar)
     page.add(ft.Column([ft.Row([ft.Text("🧙‍♂️ CRÓNICAS DEL VELO", size=14, weight=ft.FontWeight.BOLD, color="#9333EA"), ft.Row([btn_save, btn_reset], spacing=5)], alignment=ft.MainAxisAlignment.SPACE_BETWEEN), stat_container, ft.Divider(color="#1E293B"), chat_view, ft.Divider(color="#1E293B"), modo_radio, ft.Row([input_texto, btn_enviar])], expand=True))
 
-ft.app(target=main, view=ft.AppView.WEB_BROWSER, port=8000)
+ft.app(target=main)
