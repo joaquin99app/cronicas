@@ -21,8 +21,7 @@ def leer_nube_remota(correo):
                 "inventario": json.loads(data["inventario"]),
                 "lore": json.loads(data["lore_partida"])
             }
-    except:
-        return None
+    except: return None
 
 def escribir_nube_remota(correo, datos):
     try:
@@ -31,8 +30,7 @@ def escribir_nube_remota(correo, datos):
         try:
             req_check = urllib.request.Request(f"{URL_NUBE_MOCK}/{id_limpio}", headers={'User-Agent': 'Mozilla/5.0'})
             with urllib.request.urlopen(req_check, timeout=3) as r: pass
-        except:
-            existe = False
+        except: existe = False
         
         payload = json.dumps({
             "id": id_limpio,
@@ -47,8 +45,7 @@ def escribir_nube_remota(correo, datos):
         req = urllib.request.Request(url_final, data=payload, headers={'Content-Type': 'application/json', 'User-Agent': 'Mozilla/5.0'}, method=metodo)
         with urllib.request.urlopen(req, timeout=5) as response: pass
         return True
-    except:
-        return False
+    except: return False
 
 def borrar_nube_remota(correo):
     try:
@@ -56,10 +53,8 @@ def borrar_nube_remota(correo):
         url = f"{URL_NUBE_MOCK}/{id_limpio}"
         req = urllib.request.Request(url, method="DELETE", headers={'User-Agent': 'Mozilla/5.0'})
         with urllib.request.urlopen(req, timeout=3) as r: pass
-    except:
-        pass
-
-def cargar_bloque(rol, modo, texto):
+    except: pass
+        def cargar_bloque(rol, modo, texto):
     if rol == "usuario":
         bg = "#0F172A" if modo == "Pensar" else "#022C22"
         lbl = "💭 Pensasíntesis: " if modo == "Pensar" else "🗣️ Voz Alta: "
@@ -72,7 +67,9 @@ semillas_amenaza_final = [
     "Un brote de 'estática mística' se está filtrando, borrando los recuerdos de los hechiceros.",
     "El Reloj de Arena Ancestral que mantiene la barrera de invisibilidad ha sido saboteado.",
     "Un antiguo linaje de vampiros puros busca desatar una plaga mística purificadora."
-]def main(page: ft.Page):
+]
+
+def main(page: ft.Page):
     page.title = "🚨 Crónicas del Velo Mágico"
     page.bgcolor = "#05070B"
     page.theme_mode = ft.ThemeMode.DARK
@@ -81,6 +78,7 @@ semillas_amenaza_final = [
 
     client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
     
+    # Inicialización del estado persistente en page.data para evitar cruces
     page.data = {
         "stats": {"Vida": 100, "Dinero": 50, "Mana": 30, "EXP": 0, "Dias": 30},
         "inventario": ["Varita de Sauce, Toga Escolar"],
@@ -98,18 +96,19 @@ semillas_amenaza_final = [
         content=ft.Column([reloj_label, hora_label, stats_text, ft.Divider(color="#1E293B", height=5), inventario_text], alignment=ft.MainAxisAlignment.CENTER, horizontal_alignment=ft.CrossAxisAlignment.CENTER), 
         padding=15, border_radius=12, gradient=ft.LinearGradient(colors=["#0F172A", "#1E1B4B"])
     )
+    chat_view = ft.Viewport(expand=True)
     chat_container = ft.ListView(expand=True, spacing=10, height=360)
+    chat_view.content = chat_container
 
     def pintar_bienvenida():
         chat_container.controls.clear()
-        chat_container.controls.append(cargar_bloque("ia", "Pensar", "Detrás del ruidoso tráfico humano y los carteles de neón de la ciudad moderna, late un mundo oculto regido por la magia antigua, los estatutos del Velo Secreto y los decretos del Ministerio de Hechicería.\n\n📧 [SISTEMA DE GRIMORIO AUTOMÁTICO EN LA NUBE]:\nEscribe tu dirección de correo electrónico abajo en la barra de texto y dale a enviar para iniciar tu andadura o recuperar tu progreso guardado en el servidor:"))
-    
+        chat_container.controls.append(cargar_bloque("ia", "Pensar", "Detrás del ruidoso tráfico humano y los carteles de neón de la ciudad moderna, late un mundo oculto regido por la magia antigua, los estatutos del Velo Secreto y los decretos del Ministerio de Hechicería.\\n\\n📧 [SISTEMA DE GRIMORIO AUTOMÁTICO EN LA NUBE]:\\nEscribe tu dirección de correo electrónico abajo en la barra de texto y dale a enviar para iniciar tu andadura o recuperar tu progreso guardado en el servidor:"))
     pintar_bienvenida()
 
     modo_radio = ft.RadioGroup(content=ft.Row([ft.Radio(value="Pensar", label="Narrar/Pensar"), ft.Radio(value="Hablar", label="Hablar")], alignment=ft.MainAxisAlignment.CENTER))
     modo_radio.value = "Pensar"
     input_texto = ft.TextField(hint_text="Introduce tu correo electrónico para empezar...", bgcolor="#111827", border_color="#1E293B", expand=True)
-        def enviar_accion(e):
+    def enviar_accion(e):
         if not input_texto.value: return
         txt = input_texto.value.strip()
         input_texto.value = ""
@@ -128,7 +127,7 @@ semillas_amenaza_final = [
                         chat_container.controls.append(cargar_bloque(msg.get("rol", "ia"), msg.get("modo", "Pensar"), msg.get("texto", "")))
                     chat_container.controls.append(cargar_bloque("ia", "Pensar", f"🔮 Vínculo establecido con {txt}. Tu progreso e historial se han sincronizado con éxito. Continúa tu aventura."))
                 else:
-                    chat_container.controls.append(cargar_bloque("ia", "Pensar", f"✨ Correo [{txt}] registrado en la nube permanente por primera vez.\n\nTienes {page.data['stats']['Dinero']}€ mágicos en tu monedero de cuero. Los callejones invisibles albergan mercados negros y boticarios oscuros. Todo tiene un precio.\n\nElige tu arquetipo místico escribiéndolo abajo para adentrarte en el mapa abierto: Mago Urbano, Detective, Cazador o Humano Despierto."))
+                    chat_container.controls.append(cargar_bloque("ia", "Pensar", f"✨ Correo [{txt}] registrado en la nube permanente por primera vez.\\n\\nTienes {page.data['stats']['Dinero']}€ mágicos en tu monedero de cuero. Los callejones invisibles albergan mercados negros y boticarios oscuros. Todo tiene un precio.\\n\\nElige tu arquetipo místico escribiéndolo abajo para adentrarte en el mapa abierto: Mago Urbano, Detective, Cazador o Humano Despierto."))
                 reloj_label.value = f"⏳ RELOJ DE LA CRISIS: Quedan {page.data['stats']['Dias']} días para el fin del Velo"
                 stats_text.value = f"❤️ {page.data['stats']['Vida']}%  |  💰 {page.data['stats']['Dinero']}€  |  🔮 {page.data['stats']['Mana']}/30  |  ✨ {page.data['stats']['EXP']}%"
                 inventario_text.value = f"🎒 Mochila: {page.data['inventario']}"
@@ -146,9 +145,13 @@ semillas_amenaza_final = [
         page.data["historial"].append({"rol": "usuario", "modo": mod, "texto": txt})
         page.update()
 
-        prompt_sistema = f"Actúa como el Game Master de un RPG conversacional de Fantasía Urbana. Estilo denso y descriptivo.\n[SISTEMA ECONÓMICO REAL EN EUROS]\n- Despliega tiendas mágicas. Si compra, descuenta dinero y añádelo a su mochila.\n[REGLA DE VALORES FIJOS]\nEstadísticas actuales antes de tu turno: Vida={page.data['stats']['Vida']}, Dinero={page.data['stats']['Dinero']}, Mana={page.data['stats']['Mana']}, EXP={page.data['stats']['EXP']}, Dias={page.data['stats']['Dias']}.\nMochila actual: '{page.data['inventario']}'.\nAL FINAL ABSOLUTO, incluye estrictamente estos bloques:\n1. [ESTADÍSTICAS: Vida=VALOR, Dinero=VALOR, Mana=VALOR, EXP=VALOR, Dias=VALOR]\n2. [MOCHILA: Lista completa de objetos]\n3. [MEMORIA: Resumen corto de la trama]."
-        completion = client.chat.completions.create(model="llama-3.3-70b-versatile", messages=[{"role": "system", "content": prompt_sistema}] + [{"role": "user" if m.get("rol") == "usuario" else "assistant", "content": m.get("texto", "")} for m in page.data["historial"][-6:]])
-        raw_res = str(completion.choices.message.content)
+        prompt_sistema = f"Actúa como el Game Master de un RPG conversacional de Fantasía Urbana. Estilo denso y descriptivo.\\n[SISTEMA ECONÓMICO REAL EN EUROS]\\n- Despliega tiendas mágicas. Si compra, descuenta dinero y añádelo a su mochila.\\n[REGLA DE VALORES FIJOS]\\nEstadísticas actuales antes de tu turno: Vida={page.data['stats']['Vida']}, Dinero={page.data['stats']['Dinero']}, Mana={page.data['stats']['Mana']}, EXP={page.data['stats']['EXP']}, Dias={page.data['stats']['Dias']}.\\nMochila actual: '{page.data['inventario']}'.\\nAL FINAL ABSOLUTO, incluye estrictamente estos bloques:\\n1. [ESTADÍSTICAS: Vida=VALOR, Dinero=VALOR, Mana=VALOR, EXP=VALOR, Dias=VALOR]\\n2. [MOCHILA: Lista completa de objetos]\\n3. [MEMORIA: Resumen corto de la trama]."
+        
+        completion = client.chat.completions.create(
+            model="llama-3.3-70b-versatile", 
+            messages=[{"role": "system", "content": prompt_sistema}] + [{"role": "user" if m.get("rol") == "usuario" else "assistant", "content": m.get("texto", "")} for m in page.data["historial"][-6:]]
+        )
+        raw_res = str(completion.choices[0].message.content)
         res_narrador = raw_res
 
         if "[MEMORIA:" in raw_res:
@@ -176,7 +179,8 @@ semillas_amenaza_final = [
                 for cambio in cambios_str.split(","):
                     try:
                         clave, valor = cambio.split("=")
-                        k = clave.strip(); v = int(valor.strip())
+                        k = clave.strip()
+                        v = int(valor.strip())
                         if k in page.data["stats"]:
                             if k == "Vida" and v > 100: v = 100
                             if k == "Mana" and v > 30: v = 30
@@ -197,10 +201,11 @@ semillas_amenaza_final = [
             datos = {"stats": page.data["stats"], "historial": page.data["historial"], "inventario": page.data["inventario"], "lore": page.data["lore"]}
             exito = escribir_nube_remota(page.data["correo_usuario"], datos)
             if exito:
-                btn_save.content.text = "Permanent Saved"
+                btn_save.content.text = "✅ Guardado Permanente"
                 btn_save.bgcolor = "#10B981"
             else:
-                btn_save.content.text = "Network Error"; btn_save.bgcolor = "#EF4444"
+                btn_save.content.text = "❌ Error de Red"
+                btn_save.bgcolor = "#EF4444"
             page.update()
         else:
             chat_container.controls.append(cargar_bloque("ia", "Pensar", "❌ Primero introduce tu correo electrónico abajo."))
@@ -215,7 +220,8 @@ semillas_amenaza_final = [
         input_texto.hint_text = "Introduce tu correo electrónico para empezar..."
         page.data["lore"] = [f"Amenaza de extinción oculta elegida: {random.choice(semillas_amenaza_final)}"]
         pintar_bienvenida()
-        btn_save.content.text = "💾 Guardar Grimorio"; btn_save.bgcolor = "#059669"
+        btn_save.content.text = "💾 Guardar Grimorio"
+        btn_save.bgcolor = "#059669"
         reloj_label.value = f"⏳ RELOJ DE LA CRISIS: Quedan {page.data['stats']['Dias']} días para el fin del Velo"
         stats_text.value = f"❤️ {page.data['stats']['Vida']}%  |  💰 {page.data['stats']['Dinero']}€  |  🔮 {page.data['stats']['Mana']}/30  |  ✨ {page.data['stats']['EXP']}%"
         inventario_text.value = f"🎒 Mochila: {page.data['inventario']}"
@@ -224,7 +230,6 @@ semillas_amenaza_final = [
     btn_enviar = ft.ElevatedButton(content=ft.Text("🚀 ALTERAR EL DESTINO", color="white", weight=ft.FontWeight.BOLD), bgcolor="#6D28D9", on_click=enviar_accion, height=50)
     btn_save = ft.ElevatedButton(content=ft.Text("💾 Guardar Grimorio", color="white", weight=ft.FontWeight.BOLD), bgcolor="#059669", on_click=abrir_menu_guardar)
     btn_reset = ft.TextButton(content=ft.Text("💀 Reiniciar", color="#EF4444", weight=ft.FontWeight.BOLD), on_click=reiniciar)
-    page.add(ft.Column([ft.Row([ft.Text("🧙‍♂️ CRÓNICAS DEL VELO", size=14, weight=ft.FontWeight.BOLD, color="#9333EA"), ft.Row([btn_save, btn_reset], spacing=5)], alignment=ft.MainAxisAlignment.SPACE_BETWEEN), stat_container, ft.Divider(color="#1E293B"), chat_container, ft.Divider(color="#1E293B"), modo_radio, ft.Row([input_texto, btn_enviar])], expand=True))
+    page.add(ft.Column([ft.Row([ft.Text("🧙‍♂️ CRÓNICAS DEL VELO", size=14, weight=ft.FontWeight.BOLD, color="#9333EA"), ft.Row([btn_save, btn_reset], spacing=5)], alignment=ft.MainAxisAlignment.SPACE_BETWEEN), stat_container, ft.Divider(color="#1E293B"), chat_view, ft.Divider(color="#1E293B"), modo_radio, ft.Row([input_texto, btn_enviar])], expand=True))
 
-ft.app(target=main, port=int(os.environ.get("PORT", 8000)), view=ft.AppView.WEB_BROWSER)
-            
+ft.app(target=main)
