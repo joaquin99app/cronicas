@@ -6,7 +6,6 @@ from datetime import datetime
 import json
 import urllib.request
 
-# NUBE REMOTA DE INTERNET INDESTRUCTIBLE (Persistencia infinita blindada contra apagones)
 URL_NUBE_MOCK = "https://mockapi.io"
 
 def leer_nube_remota(correo):
@@ -22,8 +21,7 @@ def leer_nube_remota(correo):
                 "inventario": json.loads(data["inventario"]),
                 "lore": json.loads(data["lore_partida"])
             }
-    except:
-        return None
+    except: return None
 
 def escribir_nube_remota(correo, datos):
     try:
@@ -32,9 +30,8 @@ def escribir_nube_remota(correo, datos):
         try:
             req_check = urllib.request.Request(f"{URL_NUBE_MOCK}/{id_limpio}", headers={'User-Agent': 'Mozilla/5.0'})
             with urllib.request.urlopen(req_check, timeout=3) as r: pass
-        except:
-            existe = False
-
+        except: existe = False
+        
         payload = json.dumps({
             "id": id_limpio,
             "stats": json.dumps(datos["stats"]),
@@ -48,8 +45,7 @@ def escribir_nube_remota(correo, datos):
         req = urllib.request.Request(url_final, data=payload, headers={'Content-Type': 'application/json', 'User-Agent': 'Mozilla/5.0'}, method=metodo)
         with urllib.request.urlopen(req, timeout=5) as response: pass
         return True
-    except:
-        return False
+    except: return False
 
 def borrar_nube_remota(correo):
     try:
@@ -58,8 +54,7 @@ def borrar_nube_remota(correo):
         req = urllib.request.Request(url, method="DELETE", headers={'User-Agent': 'Mozilla/5.0'})
         with urllib.request.urlopen(req, timeout=3) as r: pass
     except: pass
-
-def main(page: ft.Page):
+        def main(page: ft.Page):
     page.title = "🚨 Crónicas del Velo Mágico"
     page.bgcolor = "#05070B"
     page.theme_mode = ft.ThemeMode.DARK
@@ -70,12 +65,13 @@ def main(page: ft.Page):
     stats = {"Vida": 100, "Dinero": 50, "Mana": 30, "EXP": 0, "Dias": 30}
     inventario_contenedor = ["Varita de Sauce, Toga Escolar"]
     historial = []
-        semillas_amenaza_final = [
-        "El motor de transmutación del Ministerio de Magia ha sido infectado por una maldición de óxido eterno que disuelve el maná de la ciudad.",
-        "Una secta de licántropos y magos oscuros está preparando el despertar de un dragón mitológico sepultado bajo los cimientos urbanos.",
-        "Un brote de 'estática mística' se está filtrando a través de la red eléctrica, borrando los recuerdos de los hechiceros y exponiendo el velo.",
-        "El Reloj de Arena Ancestral que mantiene la barrera de invisibilidad frente a los humanos mundanos ha sido agrietado en un sabotaje interno.",
-        "Un antiguo linaje de vampiros puros está comprando los nexos de sangre de las alcantarillas para desatar una plaga mística purificadora."
+    
+    semillas_amenaza_final = [
+        "El motor de transmutación del Ministry de Magia ha sido infectado por una maldición de óxido eterno que disuelve el maná de la ciudad.",
+        "Una secta de licántropos está preparando el despertar de un dragón mitológico sepultado bajo los cimientos urbanos.",
+        "Un brote de 'estática mística' se está filtrando a través de la red eléctrica, borrando los recuerdos de los hechiceros.",
+        "El Reloj de Arena Ancestral que mantiene la barrera de invisibilidad ha sido agrietado en un sabotaje interno.",
+        "Un antiguo linaje de vampiros puros está comprando los nexos de sangre para desatar una plaga mística purificadora."
     ]
     semilla_inicial = random.choice(semillas_amenaza_final)
     lore_partida_contenedor = [f"Amenaza de extinción oculta elegida: {semilla_inicial}"]
@@ -125,7 +121,7 @@ def main(page: ft.Page):
                     lore_partida_contenedor = partida_cargada["lore"]
                     chat_view.controls.clear()
                     for msg in historial: chat_view.controls.append(cargar_bloque(msg.get("rol", "ia"), msg.get("modo", "Pensar"), msg.get("texto", "")))
-                    chat_view.controls.append(cargar_bloque("ia", "Pensar", f"🔮 Vínculo establecido con {txt}. Tu historial de mensajes, monedas y mochila se han descargado desde la nube permanente con éxito. Continúa tu aventura."))
+                    chat_view.controls.append(cargar_bloque("ia", "Pensar", f"🔮 Vínculo establecido con {txt}. Tu historial de mensajes, monedas y mochila se han restaurado desde la nube permanente con éxito. Continúa tu aventura."))
                 else:
                     chat_view.controls.append(cargar_bloque("ia", "Pensar", f"✨ Correo [{txt}] registrado en la nube permanente por primera vez.\n\nTienes {stats['Dinero']}€ mágicos en tu monedero de cuero. Los callejones invisibles albergan mercados negros y boticarios oscuros. Todo tiene un precio.\n\nElige tu arquetipo místico escribiéndolo abajo para adentrarte en el mapa abierto: Mago Urbano, Detective, Cazador o Humano Despierto."))
                 reloj_label.value = f"⏳ RELOJ DE LA CRISIS: Quedan {stats['Dias']} días para el fin del Velo"
@@ -145,7 +141,7 @@ def main(page: ft.Page):
         historial.append({"rol": "usuario", "modo": mod, "texto": txt})
         page.update()
 
-        prompt_sistema = f"Actúa como el Game Master de un RPG conversacional de Fantasía Urbana Contemporánea. Tu estilo es denso y descriptivo.\n[SISTEMA ECONÓMICO REAL Y COMERCIO PROFUNDO]\n- Gestionas una economía estricta en Euros (€).\n- Despliega tiendas mágicas (armerías de varitas, boticarios, mercados negros, tabernas).\n- Si compra un objeto, resta el dinero y mételo en la mochila.\n[REGLA DE ASIGNACIÓN CRÍTICA DE MARCADORES]\nValores actuales antes de tu turno: Vida={stats['Vida']}, Dinero={stats['Dinero']}, Mana={stats['Mana']}, EXP={stats['EXP']}, Dias={stats['Dias']}.\nMochila actual: '{inventario_contenedor}'.\nAL FINAL ABSOLUTO de tu mensaje, incluye estrictamente estos bloques:\n1. [ESTADÍSTICAS: Vida=VALOR, Dinero=VALOR, Mana=VALOR, EXP=VALOR, Dias=VALOR]\n2. [MOCHILA: Lista completa de objetos]\n3. [MEMORIA: Resumen corto de la trama]."
+        prompt_sistema = f"Actúa como el Game Master de un RPG conversacional de Fantasía Urbana Contemporánea. Estilo denso y descriptivo.\n[SISTEMA ECONÓMICO REAL EN EUROS]\n- Despliega tiendas (armerías de varitas, boticarios, tabernas).\n- Si compra, descuenta dinero y añádelo a su mochila.\n[REGLA DE ASIGNACIÓN CRÍTICA VALORES FIJOS]\nEstadísticas actuales antes de tu turno: Vida={stats['Vida']}, Dinero={stats['Dinero']}, Mana={stats['Mana']}, EXP={stats['EXP']}, Dias={stats['Dias']}.\nMochila actual: '{inventario_contenedor}'.\nAL FINAL ABSOLUTO de tu mensaje, incluye estrictamente estos bloques:\n1. [ESTADÍSTICAS: Vida=VALOR, Dinero=VALOR, Mana=VALOR, EXP=VALOR, Dias=VALOR]\n2. [MOCHILA: Lista completa de objetos]\n3. [MEMORIA: Resumen corto de la trama]."
         completion = client.chat.completions.create(model="llama-3.3-70b-versatile", messages=[{"role": "system", "content": prompt_sistema}] + [{"role": "user" if m.get("rol") == "usuario" else "assistant", "content": m.get("texto", "")} for m in historial[-6:]])
         raw_res = str(completion.choices[0].message.content)
         res_narrador = raw_res
