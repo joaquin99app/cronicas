@@ -67,7 +67,7 @@ def borrar_nube_remota(correo):
     historial = []
     
     semillas_amenaza_final = [
-        "El motor de transmutación del Ministry de Magia ha sido infectado por una maldición de óxido eterno que disuelve el maná de la ciudad.",
+        "El motor de transmutación del Ministerio de Magia ha sido infectado por una maldición de óxido eterno que disuelve el maná de la ciudad.",
         "Una secta de licántropos está preparando el despertar de un dragón mitológico sepultado bajo los cimientos urbanos.",
         "Un brote de 'estática mística' se está filtrando a través de la red eléctrica, borrando los recuerdos de los hechiceros.",
         "El Reloj de Arena Ancestral que mantiene la barrera de invisibilidad ha sido agrietado en un sabotaje interno.",
@@ -121,7 +121,7 @@ def borrar_nube_remota(correo):
                     lore_partida_contenedor = partida_cargada["lore"]
                     chat_view.controls.clear()
                     for msg in historial: chat_view.controls.append(cargar_bloque(msg.get("rol", "ia"), msg.get("modo", "Pensar"), msg.get("texto", "")))
-                    chat_view.controls.append(cargar_bloque("ia", "Pensar", f"🔮 Vínculo establecido con {txt}. Tu historial de mensajes, monedas y mochila se han restaurado desde la nube permanente con éxito. Continúa tu aventura."))
+                    chat_view.controls.append(cargar_bloque("ia", "Pensar", f"🔮 Vínculo establecido con {txt}. Tu historial de mensajes, monedas y mochila se han descargado desde la nube permanente con éxito. Continúa tu aventura."))
                 else:
                     chat_view.controls.append(cargar_bloque("ia", "Pensar", f"✨ Correo [{txt}] registrado en la nube permanente por primera vez.\n\nTienes {stats['Dinero']}€ mágicos en tu monedero de cuero. Los callejones invisibles albergan mercados negros y boticarios oscuros. Todo tiene un precio.\n\nElige tu arquetipo místico escribiéndolo abajo para adentrarte en el mapa abierto: Mago Urbano, Detective, Cazador o Humano Despierto."))
                 reloj_label.value = f"⏳ RELOJ DE LA CRISIS: Quedan {stats['Dias']} días para el fin del Velo"
@@ -143,7 +143,7 @@ def borrar_nube_remota(correo):
 
         prompt_sistema = f"Actúa como el Game Master de un RPG conversacional de Fantasía Urbana Contemporánea. Estilo denso y descriptivo.\n[SISTEMA ECONÓMICO REAL EN EUROS]\n- Despliega tiendas (armerías de varitas, boticarios, tabernas).\n- Si compra, descuenta dinero y añádelo a su mochila.\n[REGLA DE ASIGNACIÓN CRÍTICA VALORES FIJOS]\nEstadísticas actuales antes de tu turno: Vida={stats['Vida']}, Dinero={stats['Dinero']}, Mana={stats['Mana']}, EXP={stats['EXP']}, Dias={stats['Dias']}.\nMochila actual: '{inventario_contenedor}'.\nAL FINAL ABSOLUTO de tu mensaje, incluye estrictamente estos bloques:\n1. [ESTADÍSTICAS: Vida=VALOR, Dinero=VALOR, Mana=VALOR, EXP=VALOR, Dias=VALOR]\n2. [MOCHILA: Lista completa de objetos]\n3. [MEMORIA: Resumen corto de la trama]."
         completion = client.chat.completions.create(model="llama-3.3-70b-versatile", messages=[{"role": "system", "content": prompt_sistema}] + [{"role": "user" if m.get("rol") == "usuario" else "assistant", "content": m.get("texto", "")} for m in historial[-6:]])
-        raw_res = str(completion.choices[0].message.content)
+        raw_res = str(completion.choices.message.content)
         res_narrador = raw_res
                 if "[MEMORIA:" in raw_res:
             try:
@@ -223,3 +223,4 @@ def borrar_nube_remota(correo):
     page.add(ft.Column([ft.Row([ft.Text("🧙‍♂️ CRÓNICAS DEL VELO", size=14, weight=ft.FontWeight.BOLD, color="#9333EA"), ft.Row([btn_save, btn_reset], spacing=5)], alignment=ft.MainAxisAlignment.SPACE_BETWEEN), stat_container, ft.Divider(color="#1E293B"), chat_view, ft.Divider(color="#1E293B"), modo_radio, ft.Row([input_texto, btn_enviar])], expand=True))
 
 ft.app(target=main, view=ft.AppView.WEB_BROWSER, port=8000)
+                
