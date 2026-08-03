@@ -22,7 +22,8 @@ def leer_nube_remota(correo):
                 "lore": json.loads(data["lore_partida"])
             }
     except: return None
-            def escribir_nube_remota(correo, datos):
+
+def escribir_nube_remota(correo, datos):
     try:
         id_limpio = correo.replace("@", "_at_").replace(".", "_dot_")
         existe = True
@@ -53,7 +54,8 @@ def borrar_nube_remota(correo):
         req = urllib.request.Request(url, method="DELETE", headers={'User-Agent': 'Mozilla/5.0'})
         with urllib.request.urlopen(req, timeout=3) as r: pass
     except: pass
-            def main(page: ft.Page):
+
+def main(page: ft.Page):
     page.title = "🚨 Crónicas del Velo Mágico"
     page.bgcolor = "#05070B"
     page.theme_mode = ft.ThemeMode.DARK
@@ -86,7 +88,7 @@ def borrar_nube_remota(correo):
         padding=15, border_radius=12, gradient=ft.LinearGradient(colors=["#0F172A", "#1E1B4B"])
     )
     chat_view = ft.ListView(expand=True, spacing=10, height=360)
-    def cargar_bloque(rol, modo, texto):
+        def cargar_bloque(rol, modo, texto):
         if rol == "usuario":
             bg = "#0F172A" if modo == "Pensar" else "#022C22"
             lbl = "💭 Pensasíntesis: " if modo == "Pensar" else "🗣️ Voz Alta: "
@@ -191,10 +193,10 @@ def borrar_nube_remota(correo):
             datos = {"stats": stats, "historial": historial, "inventario": inventario_contenedor, "lore": lore_partida_contenedor}
             exito = escribir_nube_remota(page.data["correo_usuario"], datos)
             if exito:
-                btn_save.content.text = "✅ Guardado Permanente"
+                btn_save.content.text = "Permanent Saved"
                 btn_save.bgcolor = "#10B981"
             else:
-                btn_save.content.text = "❌ Error de Red"; btn_save.bgcolor = "#EF4444"
+                btn_save.content.text = "Network Error"; btn_save.bgcolor = "#EF4444"
             page.update()
         else:
             chat_view.controls.append(cargar_bloque("ia", "Pensar", "❌ Primero introduce tu correo electrónico abajo."))
@@ -222,4 +224,3 @@ def borrar_nube_remota(correo):
     page.add(ft.Column([ft.Row([ft.Text("🧙‍♂️ CRÓNICAS DEL VELO", size=14, weight=ft.FontWeight.BOLD, color="#9333EA"), ft.Row([btn_save, btn_reset], spacing=5)], alignment=ft.MainAxisAlignment.SPACE_BETWEEN), stat_container, ft.Divider(color="#1E293B"), chat_view, ft.Divider(color="#1E293B"), modo_radio, ft.Row([input_texto, btn_enviar])], expand=True))
 
 ft.app(target=main, view=ft.AppView.WEB_BROWSER, port=8000)
-                    
