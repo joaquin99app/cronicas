@@ -63,14 +63,17 @@ def borrar_nube_remota(correo):
     except: pass
 
 def main(page: ft.Page):
+    # 1. Configuración de pantalla estilo App Móvil Premium
     page.title = "🚨 Crónicas del Velo Mágico"
     page.bgcolor = "#05070B"
     page.theme_mode = ft.ThemeMode.DARK
     page.scroll = ft.ScrollMode.AUTO
     page.padding = 20
 
+    # Conexión segura con la IA de Groq en Render
     client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
 
+    # Variables de estado internas de la sesión actual
     stats = {"Vida": 100, "Dinero": 50, "Mana": 30, "EXP": 0, "Dias": 30}
     inventario_contenedor = ["Varita de Sauce, Toga Escolar"]
     historial = []
@@ -84,8 +87,10 @@ def main(page: ft.Page):
     semilla_inicial = random.choice(semillas_amenaza_final)
     lore_partida_contenedor = [f"Amenaza de extinción oculta elegida: {semilla_inicial}"]
 
+    # Variables de control de correo electrónico fijadas en la página
     page.data = {"correo_usuario": None}
 
+    # 3. Componentes visuales superiores unificados (Añadido el Inventario Gráfico)
     reloj_label = ft.Text(f"⏳ RELOJ DE LA CRISIS: Quedan {stats['Dias']} días para el fin del Velo", color="#A78BFA", weight=ft.FontWeight.BOLD, size=14)
     hora_label = ft.Text(f"⏰ Tiempo Real: {datetime.now().strftime('%H:%M')} | ☀️ BAJO EL VELO", color="#38BDF8", size=12, weight=ft.FontWeight.W_500)
     stats_text = ft.Text(f"❤️ {stats['Vida']}%  |  💰 {stats['Dinero']}€  |  🔮 {stats['Mana']}/30  |  ✨ {stats['EXP']}%", color="#F3F4F6", weight=ft.FontWeight.BOLD, size=15)
@@ -96,6 +101,7 @@ def main(page: ft.Page):
         padding=15, border_radius=12, gradient=ft.LinearGradient(colors=["#0F172A", "#1E1B4B"])
     )
 
+    # 4. Historial del Chat Principal
     chat_view = ft.ListView(expand=True, spacing=10, height=360)
     
     def cargar_bloque(rol, modo, texto):
@@ -117,16 +123,19 @@ def main(page: ft.Page):
     
     pintar_bienvenida()
 
+    # 5. Controles inferiores
     modo_radio = ft.RadioGroup(content=ft.Row([ft.Radio(value="Pensar", label="Narrar/Pensar"), ft.Radio(value="Hablar", label="Hablar")], alignment=ft.MainAxisAlignment.CENTER))
     modo_radio.value = "Pensar"
     input_texto = ft.TextField(hint_text="Introduce tu correo electrónico para empezar...", bgcolor="#111827", border_color="#1E293B", expand=True)
 
+    # 6. Lógica de ejecución de la IA al pulsar el botón
     def enviar_accion(e):
         nonlocal lore_partida_contenedor, stats, historial, inventario_contenedor
         if not input_texto.value: return
         txt = input_texto.value.strip()
         input_texto.value = ""
         
+        # MECÁNICA DE CARGA AUTOMÁTICA DETECTANDO EL CORREO ELECTRÓNICO (Contiene arroba y punto)
         if page.data["correo_usuario"] is None:
             if "@" in txt and "." in txt:
                 page.data["correo_usuario"] = txt
@@ -160,6 +169,7 @@ def main(page: ft.Page):
                 page.update()
                 return
 
+        # FLUJO DE JUEGO NORMAL CON LA IA (Solo se activa si el usuario ya se ha validado con su correo)
         mod = modo_radio.value
         chat_view.controls.append(cargar_bloque("usuario", mod, txt))
         historial.append({"rol": "usuario", "modo": mod, "texto": txt})
@@ -174,23 +184,31 @@ def main(page: ft.Page):
         [RITMO DE APOCALIPSIS VARIABLE]
         La gran amenaza final que destruirá el Velo a los 30 días es: '{str(lore_partida_contenedor)}'. Decide si revelar este peligro inmediatamente o dejar caer pistas y rumores discretos de fondo.
         [REGLA DE ASIGNACIÓN CRÍTICA DE MARCADORES]
-        Al final de tu respuesta, debes evaluar las estadísticas del jugador. REGLA: Los datos que pongas sustituirán por completo a los anteriores. NO son incrementos, son los NUEVOS VALORES FIJOS.
+        Al final de tu respuesta, debes evaluar las estadísticas del jugador. REGLA: Los datos que pongas sustituirán por completo a los anteriores. NO son incrementos, son los NUEVOS VALORES FIJOS. No los subas sin sentido. Si compra algo, resta el dinero. Si sufre daño, baja la vida.
         Valores actuales del jugador antes de tu turno: Vida={stats['Vida']}, Dinero={stats['Dinero']}, Mana={stats['Mana']}, EXP={stats['EXP']}, Dias={stats['Dias']}.
         Contenido actual de la Mochila: '{inventario_contenedor}'.
+        
         AL FINAL ABSOLUTO de tu mensaje, incluye estrictamente estos tres bloques en este formato exacto:
         1. [ESTADÍSTICAS: Vida=VALOR_FINAL, Dinero=VALOR_FINAL, Mana=VALOR_FINAL, EXP=VALOR_FINAL, Dias=VALOR_FINAL]
         2. [MOCHILA: Escribe aquí la lista completa de objetos actualizados de su inventario]
         3. [MEMORIA: "Resumen corto de la trama o situación actual"].
         """
 
-        completion = client.chat.completions.create(model="llama-3.3-70b-versatile", messages=[{"role": "system", "content": prompt_sistema}] + [{"role": "user" if m.get("rol") == "usuario" else "assistant", "content": m.get("texto", "")} for m in historial[-6:]])
+        mensajes_api = [{"role": "system", "content": prompt_sistema}]
+        for msg in historial[-6:]:
+            rol_api = "user" if msg.get("rol") == "usuario" else "assistant"
+            mensajes_api.append({"role": rol_api, "content": msg.get("texto", "")})
+
+        completion = client.chat.completions.create(model="llama-3.3-70b-versatile", messages=mensajes_api)
         raw_res = str(completion.choices[0].message.content)
         res_narrador = raw_res
+                # PROCESADOR SEGURO DE STRINGS PUROS (Asignación y modificación interactiva en tiempo real)
         if "[MEMORIA:" in raw_res:
             try:
                 idx_ini = raw_res.index("[MEMORIA:")
                 idx_fin = raw_res.index("]", idx_ini)
-                lore_partida_contenedor = [raw_res[idx_ini + 9:idx_fin].replace('"', '').strip()]
+                contenido_lore = raw_res[idx_ini + 9:idx_fin].replace('"', '').strip()
+                lore_partida_contenedor = [contenido_lore]
                 res_narrador = raw_res[:idx_ini].strip()
             except: pass
 
@@ -198,7 +216,8 @@ def main(page: ft.Page):
             try:
                 idx_ini = raw_res.index("[MOCHILA:")
                 idx_fin = raw_res.index("]", idx_ini)
-                inventario_contenedor = [raw_res[idx_ini + 9:idx_fin].strip()]
+                contenido_inv = raw_res[idx_ini + 9:idx_fin].strip()
+                inventario_contenedor = [contenido_inv]
                 if idx_ini < len(res_narrador):
                     res_narrador = raw_res[:idx_ini].strip()
             except: pass
@@ -224,7 +243,7 @@ def main(page: ft.Page):
             except: pass
 
         chat_view.controls.append(cargar_bloque("ia", "Pensar", res_narrador.strip()))
-        historial.append({"role": "assistant", "texto": res_narrador.strip()})
+        historial.append({"rol": "ia", "texto": res_narrador.strip()})
         reloj_label.value = f"⏳ RELOJ DE LA CRISIS: Quedan {stats['Dias']} días para el fin del Velo"
         hora_label.value = f"⏰ Tiempo Real: {datetime.now().strftime('%H:%M')} | ☀️ BAJO EL VELO"
         stats_text.value = f"❤️ {stats['Vida']}%  |  💰 {stats['Dinero']}€  |  🔮 {stats['Mana']}/30  |  ✨ {stats['EXP']}%"
@@ -274,4 +293,3 @@ def main(page: ft.Page):
     page.add(ft.Column([ft.Row([ft.Text("🧙‍♂️ CRÓNICAS DEL VELO", size=14, weight=ft.FontWeight.BOLD, color="#9333EA"), ft.Row([btn_save, btn_reset], spacing=5)], alignment=ft.MainAxisAlignment.SPACE_BETWEEN), stat_container, ft.Divider(color="#1E293B"), chat_view, ft.Divider(color="#1E293B"), modo_radio, ft.Row([input_texto, btn_enviar])], expand=True))
 
 ft.app(target=main, view=ft.AppView.WEB_BROWSER, port=8000)
-                
