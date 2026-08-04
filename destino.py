@@ -78,7 +78,6 @@ def main(page: ft.Page):
 
     client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
     
-    # Inicialización del estado persistente en page.data para evitar cruces
     page.data = {
         "stats": {"Vida": 100, "Dinero": 50, "Mana": 30, "EXP": 0, "Dias": 30},
         "inventario": ["Varita de Sauce, Toga Escolar"],
@@ -102,7 +101,7 @@ def main(page: ft.Page):
 
     def pintar_bienvenida():
         chat_container.controls.clear()
-        chat_container.controls.append(cargar_bloque("ia", "Pensar", "Detrás del ruidoso tráfico humano y los carteles de neón de la ciudad moderna, late un mundo oculto regido por la magia antigua, los estatutos del Velo Secreto y los decretos del Ministerio de Hechicería.\\n\\n📧 [SISTEMA DE GRIMORIO AUTOMÁTICO EN LA NUBE]:\\nEscribe tu dirección de correo electrónico abajo en la barra de texto y dale a enviar para iniciar tu andadura o recuperar tu progreso guardado en el servidor:"))
+        chat_container.controls.append(cargar_bloque("ia", "Pensar", "Detrás del ruidoso tráfico humano y los carteles de neón de la ciudad moderna, late un mundo oculto regido por la magia antigua, los estatutos del Velo Secreto y los decretos del Ministerio de Hechicería.\n\n📧 [SISTEMA DE GRIMORIO AUTOMÁTICO EN LA NUBE]:\nEscribe tu dirección de correo electrónico abajo en la barra de texto y dale a enviar para iniciar tu andadura o recuperar tu progreso guardado en el servidor:"))
     pintar_bienvenida()
 
     modo_radio = ft.RadioGroup(content=ft.Row([ft.Radio(value="Pensar", label="Narrar/Pensar"), ft.Radio(value="Hablar", label="Hablar")], alignment=ft.MainAxisAlignment.CENTER))
@@ -127,7 +126,7 @@ def main(page: ft.Page):
                         chat_container.controls.append(cargar_bloque(msg.get("rol", "ia"), msg.get("modo", "Pensar"), msg.get("texto", "")))
                     chat_container.controls.append(cargar_bloque("ia", "Pensar", f"🔮 Vínculo establecido con {txt}. Tu progreso e historial se han sincronizado con éxito. Continúa tu aventura."))
                 else:
-                    chat_container.controls.append(cargar_bloque("ia", "Pensar", f"✨ Correo [{txt}] registrado en la nube permanente por primera vez.\\n\\nTienes {page.data['stats']['Dinero']}€ mágicos en tu monedero de cuero. Los callejones invisibles albergan mercados negros y boticarios oscuros. Todo tiene un precio.\\n\\nElige tu arquetipo místico escribiéndolo abajo para adentrarte en el mapa abierto: Mago Urbano, Detective, Cazador o Humano Despierto."))
+                    chat_container.controls.append(cargar_bloque("ia", "Pensar", f"✨ Correo [{txt}] registrado en la nube permanente por primera vez.\n\nTienes {page.data['stats']['Dinero']}€ mágicos en tu monedero de cuero. Los callejones invisibles albergan mercados negros y boticarios oscuros. Todo tiene un precio.\n\nElige tu arquetipo místico escribiéndolo abajo para adentrarte en el mapa abierto: Mago Urbano, Detective, Cazador o Humano Despierto."))
                 reloj_label.value = f"⏳ RELOJ DE LA CRISIS: Quedan {page.data['stats']['Dias']} días para el fin del Velo"
                 stats_text.value = f"❤️ {page.data['stats']['Vida']}%  |  💰 {page.data['stats']['Dinero']}€  |  🔮 {page.data['stats']['Mana']}/30  |  ✨ {page.data['stats']['EXP']}%"
                 inventario_text.value = f"🎒 Mochila: {page.data['inventario']}"
@@ -145,13 +144,13 @@ def main(page: ft.Page):
         page.data["historial"].append({"rol": "usuario", "modo": mod, "texto": txt})
         page.update()
 
-        prompt_sistema = f"Actúa como el Game Master de un RPG conversacional de Fantasía Urbana. Estilo denso y descriptivo.\\n[SISTEMA ECONÓMICO REAL EN EUROS]\\n- Despliega tiendas mágicas. Si compra, descuenta dinero y añádelo a su mochila.\\n[REGLA DE VALORES FIJOS]\\nEstadísticas actuales antes de tu turno: Vida={page.data['stats']['Vida']}, Dinero={page.data['stats']['Dinero']}, Mana={page.data['stats']['Mana']}, EXP={page.data['stats']['EXP']}, Dias={page.data['stats']['Dias']}.\\nMochila actual: '{page.data['inventario']}'.\\nAL FINAL ABSOLUTO, incluye estrictamente estos bloques:\\n1. [ESTADÍSTICAS: Vida=VALOR, Dinero=VALOR, Mana=VALOR, EXP=VALOR, Dias=VALOR]\\n2. [MOCHILA: Lista completa de objetos]\\n3. [MEMORIA: Resumen corto de la trama]."
+        prompt_sistema = f"Actúa como el Game Master de un RPG conversacional de Fantasía Urbana. Estilo denso y descriptivo.\n[SISTEMA ECONÓMICO REAL EN EUROS]\n- Despliega tiendas mágicas. Si compra, descuenta dinero y añádelo a su mochila.\n[REGLA DE VALORES FIJOS]\nEstadísticas actuales antes de tu turno: Vida={page.data['stats']['Vida']}, Dinero={page.data['stats']['Dinero']}, Mana={page.data['stats']['Mana']}, EXP={page.data['stats']['EXP']}, Dias={page.data['stats']['Dias']}.\nMochila actual: '{page.data['inventario']}'.\nAL FINAL ABSOLUTO, incluye estrictamente estos bloques:\n1. [ESTADÍSTICAS: Vida=VALOR, Dinero=VALOR, Mana=VALOR, EXP=VALOR, Dias=VALOR]\n2. [MOCHILA: Lista completa de objetos]\n3. [MEMORIA: Resumen corto de la trama]."
         
         completion = client.chat.completions.create(
             model="llama-3.3-70b-versatile", 
             messages=[{"role": "system", "content": prompt_sistema}] + [{"role": "user" if m.get("rol") == "usuario" else "assistant", "content": m.get("texto", "")} for m in page.data["historial"][-6:]]
         )
-        raw_res = str(completion.choices[0].message.content)
+        raw_res = str(completion.choices.message.content)
         res_narrador = raw_res
 
         if "[MEMORIA:" in raw_res:
@@ -233,3 +232,4 @@ def main(page: ft.Page):
     page.add(ft.Column([ft.Row([ft.Text("🧙‍♂️ CRÓNICAS DEL VELO", size=14, weight=ft.FontWeight.BOLD, color="#9333EA"), ft.Row([btn_save, btn_reset], spacing=5)], alignment=ft.MainAxisAlignment.SPACE_BETWEEN), stat_container, ft.Divider(color="#1E293B"), chat_view, ft.Divider(color="#1E293B"), modo_radio, ft.Row([input_texto, btn_enviar])], expand=True))
 
 ft.app(target=main)
+        
