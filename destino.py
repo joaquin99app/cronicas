@@ -86,7 +86,6 @@ def main(page: ft.Page):
         "correo_usuario": None
     }
 
-    # SE DEClARAN LOS COMPONENTES PRIMERO PARA QUE EL CÓDIGO CONOZCA SU EXISTENCIA
     reloj_label = ft.Text(f"⏳ RELOJ DE LA CRISIS: Quedan {page.data['stats']['Dias']} días para el fin del Velo", color="#A78BFA", weight=ft.FontWeight.BOLD, size=14)
     hora_label = ft.Text(f"⏰ Tiempo Real: {datetime.now().strftime('%H:%M')} | ☀️ BAJO EL VELO", color="#38BDF8", size=12, weight=ft.FontWeight.W_500)
     stats_text = ft.Text(f"❤️ {page.data['stats']['Vida']}%  |  💰 {page.data['stats']['Dinero']}€  |  🔮 {page.data['stats']['Mana']}/30  |  ✨ {page.data['stats']['EXP']}%", color="#F3F4F6", weight=ft.FontWeight.BOLD, size=15)
@@ -102,14 +101,13 @@ def main(page: ft.Page):
     modo_radio.value = "Pensar"
     input_texto = ft.TextField(hint_text="Introduce tu correo electrónico para empezar...", bgcolor="#111827", border_color="#1E293B", expand=True)
 
-    # BOTONES INICIALIZADOS DE ANTEMANO (Inmunes a errores de orden de lectura)
     btn_enviar = ft.ElevatedButton(content=ft.Text("🚀 ALTERAR EL DESTINO", color="white", weight=ft.FontWeight.BOLD), bgcolor="#6D28D9", height=50)
     btn_save = ft.ElevatedButton(content=ft.Text("💾 Guardar Grimorio", color="white", weight=ft.FontWeight.BOLD), bgcolor="#059669")
     btn_reset = ft.TextButton(content=ft.Text("💀 Reiniciar", color="#EF4444", weight=ft.FontWeight.BOLD))
 
     def pintar_bienvenida():
         chat_container.controls.clear()
-        chat_container.controls.append(cargar_bloque("ia", "Pensar", "Detrás del ruidoso tráfico humano y los carteles de neón de la ciudad moderna, late un mundo oculto regido por la magia antigua, los estatutos del Velo Secreto y los decretos del Ministerio de Hechicería.\n\n📧 [SISTEMA DE GRIMORIO AUTOMÁTICO EN LA NUBE]:\nEscribe tu dirección de correo electrónico abajo en la barra de texto y dale a enviar para iniciar tu andadura o recuperar tu progreso guardado en el servidor:"))
+        chat_container.controls.append(cargar_bloque("ia", "Pensar", "Detrás del ruidoso tráfico humano y los carteles de neón de la ciudad moderna, late un world oculto regido por la magia antigua, los estatutos del Velo Secreto y los decretos del Ministerio de Hechicería.\n\n📧 [SISTEMA DE GRIMORIO AUTOMÁTICO EN LA NUBE]:\nEscribe tu dirección de correo electrónico abajo en la barra de texto y dale a enviar para iniciar tu andadura o recuperar tu progreso guardado en el servidor:"))
     pintar_bienvenida()
     def enviar_accion(e):
         if not input_texto.value: return
@@ -230,7 +228,6 @@ def main(page: ft.Page):
         inventario_text.value = f"🎒 Mochila: {page.data['inventario']}"
         page.update()
 
-    # CONEXIÓN DE ACCIONES A LOS BOTONES YA CREADOS
     btn_enviar.on_click = enviar_accion
     btn_save.on_click = abrir_menu_guardar
     btn_reset.on_click = reiniciar
