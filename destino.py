@@ -86,6 +86,7 @@ def main(page: ft.Page):
         "correo_usuario": None
     }
 
+    # SE DEClARAN LOS COMPONENTES PRIMERO PARA QUE EL CÓDIGO CONOZCA SU EXISTENCIA
     reloj_label = ft.Text(f"⏳ RELOJ DE LA CRISIS: Quedan {page.data['stats']['Dias']} días para el fin del Velo", color="#A78BFA", weight=ft.FontWeight.BOLD, size=14)
     hora_label = ft.Text(f"⏰ Tiempo Real: {datetime.now().strftime('%H:%M')} | ☀️ BAJO EL VELO", color="#38BDF8", size=12, weight=ft.FontWeight.W_500)
     stats_text = ft.Text(f"❤️ {page.data['stats']['Vida']}%  |  💰 {page.data['stats']['Dinero']}€  |  🔮 {page.data['stats']['Mana']}/30  |  ✨ {page.data['stats']['EXP']}%", color="#F3F4F6", weight=ft.FontWeight.BOLD, size=15)
@@ -97,14 +98,19 @@ def main(page: ft.Page):
     )
     chat_container = ft.ListView(expand=True, spacing=10, height=360)
 
+    modo_radio = ft.RadioGroup(content=ft.Row([ft.Radio(value="Pensar", label="Narrar/Pensar"), ft.Radio(value="Hablar", label="Hablar")], alignment=ft.MainAxisAlignment.CENTER))
+    modo_radio.value = "Pensar"
+    input_texto = ft.TextField(hint_text="Introduce tu correo electrónico para empezar...", bgcolor="#111827", border_color="#1E293B", expand=True)
+
+    # BOTONES INICIALIZADOS DE ANTEMANO (Inmunes a errores de orden de lectura)
+    btn_enviar = ft.ElevatedButton(content=ft.Text("🚀 ALTERAR EL DESTINO", color="white", weight=ft.FontWeight.BOLD), bgcolor="#6D28D9", height=50)
+    btn_save = ft.ElevatedButton(content=ft.Text("💾 Guardar Grimorio", color="white", weight=ft.FontWeight.BOLD), bgcolor="#059669")
+    btn_reset = ft.TextButton(content=ft.Text("💀 Reiniciar", color="#EF4444", weight=ft.FontWeight.BOLD))
+
     def pintar_bienvenida():
         chat_container.controls.clear()
         chat_container.controls.append(cargar_bloque("ia", "Pensar", "Detrás del ruidoso tráfico humano y los carteles de neón de la ciudad moderna, late un mundo oculto regido por la magia antigua, los estatutos del Velo Secreto y los decretos del Ministerio de Hechicería.\n\n📧 [SISTEMA DE GRIMORIO AUTOMÁTICO EN LA NUBE]:\nEscribe tu dirección de correo electrónico abajo en la barra de texto y dale a enviar para iniciar tu andadura o recuperar tu progreso guardado en el servidor:"))
     pintar_bienvenida()
-
-    modo_radio = ft.RadioGroup(content=ft.Row([ft.Radio(value="Pensar", label="Narrar/Pensar"), ft.Radio(value="Hablar", label="Hablar")], alignment=ft.MainAxisAlignment.CENTER))
-    modo_radio.value = "Pensar"
-    input_texto = ft.TextField(hint_text="Introduce tu correo electrónico para empezar...", bgcolor="#111827", border_color="#1E293B", expand=True)
     def enviar_accion(e):
         if not input_texto.value: return
         txt = input_texto.value.strip()
@@ -148,7 +154,7 @@ def main(page: ft.Page):
             model="llama-3.3-70b-versatile", 
             messages=[{"role": "system", "content": prompt_sistema}] + [{"role": "user" if m.get("rol") == "usuario" else "assistant", "content": m.get("texto", "")} for m in page.data["historial"][-6:]]
         )
-        raw_res = str(completion.choices.message.content)
+        raw_res = str(completion.choices[0].message.content)
         res_narrador = raw_res
 
         if "[MEMORIA:" in raw_res:
@@ -176,7 +182,7 @@ def main(page: ft.Page):
                 for cambio in cambios_str.split(","):
                     try:
                         clave, valor = cambio.split("=")
-                        k = clave.strip()
+                        k = cambio.strip()
                         v = int(valor.strip())
                         if k in page.data["stats"]:
                             if k == "Vida" and v > 100: v = 100
@@ -224,10 +230,11 @@ def main(page: ft.Page):
         inventario_text.value = f"🎒 Mochila: {page.data['inventario']}"
         page.update()
 
-    btn_enviar = ft.ElevatedButton(content=ft.Text("🚀 ALTERAR EL DESTINO", color="white", weight=ft.FontWeight.BOLD), bgcolor="#6D28D9", on_click=enviar_accion, height=50)
-    btn_save = ft.ElevatedButton(content=ft.Text("💾 Guardar Grimorio", color="white", weight=ft.FontWeight.BOLD), bgcolor="#059669", on_click=abrir_menu_guardar)
-    btn_reset = ft.TextButton(content=ft.Text("💀 Reiniciar", color="#EF4444", weight=ft.FontWeight.BOLD), on_click=reiniciar)
+    # CONEXIÓN DE ACCIONES A LOS BOTONES YA CREADOS
+    btn_enviar.on_click = enviar_accion
+    btn_save.on_click = abrir_menu_guardar
+    btn_reset.on_click = reiniciar
+
     page.add(ft.Column([ft.Row([ft.Text("🧙‍♂️ CRÓNICAS DEL VELO", size=14, weight=ft.FontWeight.BOLD, color="#9333EA"), ft.Row([btn_save, btn_reset], spacing=5)], alignment=ft.MainAxisAlignment.SPACE_BETWEEN), stat_container, ft.Divider(color="#1E293B"), chat_container, ft.Divider(color="#1E293B"), modo_radio, ft.Row([input_texto, btn_enviar])], expand=True))
 
 ft.app(target=main)
-        
