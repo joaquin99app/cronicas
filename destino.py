@@ -9,7 +9,7 @@ def leer_nube(correo):
     try:
         url = f"{URL_MOCK}/{correo.replace('@','_at_').replace('.','_dot_')}"
         req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
-        with urllib.request.urlopen(req, timeout=4) as r:
+        with urllib.request.urlopen(req, timeout=5) as r:
             d = json.loads(r.read().decode('utf-8'))
             return {"stats": json.loads(d["stats"]), "historial": json.loads(d["historial"]), "inventario": json.loads(d["inventario"]), "lore": json.loads(d["lore_partida"])}
     except: return None
@@ -19,11 +19,11 @@ def escribir_nube(correo, datos):
         id_l = correo.replace("@", "_at_").replace(".", "_dot_")
         existe = True
         try:
-            with urllib.request.urlopen(urllib.request.Request(f"{URL_MOCK}/{id_l}", headers={'User-Agent': 'Mozilla/5.0'}), timeout=2) as r: pass
+            with urllib.request.urlopen(urllib.request.Request(f"{URL_MOCK}/{id_l}", headers={'User-Agent': 'Mozilla/5.0'}), timeout=3) as r: pass
         except: existe = False
         payload = json.dumps({"id": id_l, "stats": json.dumps(datos["stats"]), "historial": json.dumps(datos["historial"]), "inventario": json.dumps(datos["inventario"]), "lore_partida": json.dumps(datos["lore"])}).encode('utf-8')
         req = urllib.request.Request(f"{URL_MOCK}/{id_l}" if existe else URL_MOCK, data=payload, headers={'Content-Type': 'application/json', 'User-Agent': 'Mozilla/5.0'}, method="PUT" if existe else "POST")
-        with urllib.request.urlopen(req, timeout=4) as r: pass
+        with urllib.request.urlopen(req, timeout=5) as r: pass
         return True
     except: return False
 
@@ -34,7 +34,7 @@ def cargar_bloque(rol, modo, texto):
 
 semillas = [
     "La criatura del pozo del ala norte despierta si no se respetan las patrullas nocturnas.",
-    "El Gran Reloj Astronómico se ha retrasado, congelando estancias antiguas llenas de trampas rúnicas.",
+    "El Gran Reloj Astronómico se ha retrasado, congelando estancias llenas de trampas rúnicas.",
     "Alguien está contrabandeando duendecillos de Cornualles en los dormitorios de primer año.",
     "Los cuadros de la tercera planta han huido de sus lienzos ocultando el pase a los sótanos."
 ]def main(page: ft.Page):
@@ -46,7 +46,7 @@ semillas = [
     client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
     page.data = {"stats": {"Vida": 100, "Dinero": 15, "Mana": 10, "EXP": 0, "Dias": 270}, "inventario": ["Túnica de Primer Año", "Varita de Fresno", "Mascota Pequeña"], "historial": [], "lore": [f"Misterio: {random.choice(semillas)}"], "correo_usuario": None}
 
-    reloj_lbl = ft.Text(f"📅 CURSO: Quedan {page.data['stats']['Dias']} días para los Exámenes Finales", color="#A78BFA", weight=ft.FontWeight.BOLD, size=13)
+    reloj_lbl = ft.Text(f"📅 CURSO: Quedan {page.data['stats']['Dias']} días para los Finales", color="#A78BFA", weight=ft.FontWeight.BOLD, size=13)
     stats_lbl = ft.Text(f"❤️ Vitalidad: {page.data['stats']['Vida']}% | 🪙 {page.data['stats']['Dinero']} Galeones | 🔮 Maná: {page.data['stats']['Mana']}/10", color="#F3F4F6", size=12, weight=ft.FontWeight.BOLD)
     inv_lbl = ft.Text(f"🎒 Mochila: {page.data['inventario']}", color="#94A3B8", size=11, italic=True)
     
@@ -63,26 +63,8 @@ semillas = [
 
     def la_bienvenida():
         chat_box.controls.clear()
-        chat_box.controls.append(cargar_bloque("ia", "Pensar", "Frente a ti se alzan los muros del Colegio de Magia. Eres un niño pequeño dando tus primeros pasos. El uniforme te queda grande, el maná es limitado y hay zonas prohibidas vigiladas por gárgolas y prefectos severos donde requieres INGENIO PURO para colarte.\\n\\n📧 [SISTEMA DE MATRÍCULA]: Escribe tu correo abajo para cargar o iniciar curso:"))
+        chat_box.controls.append(cargar_bloque("ia", "Pensar", "Frente a ti se alzan los muros del Colegio de Magia. Eres un niño pequeño dando tus primeros pasos. El uniforme te queda grande, el maná es limitado y hay zonas prohibidas vigiladas por gárgolas y prefectos severos donde requieres INGENIO PURO para colarte.\n\n📧 [SISTEMA DE MATRÍCULA]: Escribe tu correo abajo para cargar o iniciar curso:"))
     la_bienvenida()
-
-    def guardar():
-        if page.data["correo_usuario"]:
-            if escribir_nube(page.data["correo_usuario"], {"stats": page.data["stats"], "historial": page.data["historial"], "inventario": page.data["inventario"], "lore": page.data["lore"]}):
-                btn_sav.content.text = "✅ Notas Guardadas"; btn_sav.bgcolor = "#10B981"
-            else: btn_sav.content.text = "❌ Error Red"; btn_sav.bgcolor = "#EF4444"
-            page.update()
-
-    def reiniciar():
-        if page.data["correo_usuario"]:
-            try: urllib.request.urlopen(urllib.request.Request(f"{URL_MOCK}/{page.data['correo_usuario'].replace('@','_at_').replace('.','_dot_')}", method="DELETE", headers={'User-Agent': 'Mozilla/5.0'}), timeout=2)
-            except: pass
-        page.data.update({"stats": {"Vida": 100, "Dinero": 15, "Mana": 10, "EXP": 0, "Dias": 270}, "inventario": ["Túnica de Primer Año", "Varita de Fresno", "Mascota Pequeña"], "historial": [], "correo_usuario": None, "lore": [f"Misterio: {random.choice(semillas)}"]})
-        la_bienvenida(); btn_sav.content.text = "💾 Guardar Notas"; btn_sav.bgcolor = "#065F46"
-        reloj_lbl.value = f"📅 CURSO: Quedan {page.data['stats']['Dias']} días para los Exámenes Finales"
-        stats_lbl.value = f"❤️ Vitalidad: {page.data['stats']['Vida']}% | 🪙 {page.data['stats']['Dinero']} Galeones | 🔮 Maná: {page.data['stats']['Mana']}/10"
-        inv_lbl.value = f"🎒 Mochila: {page.data['inventario']}"; input_txt.hint_text = "Introduce tu correo electrónico de matrícula..."
-        page.update()
 
     def enviar_accion(e):
         if not input_txt.value: return
@@ -119,7 +101,7 @@ semillas = [
 
         p_sys = f"Actúa como Game Master de un RPG en un Colegio de Magia escolar. El jugador es un NIÑO PEQUEÑO de primer año: bajo, físicamente débil y con maná máximo limitado (10). Las zonas prohibidas (Sección Restringida, Mazmorras Nocturnas) requieren INGENIO PURO (esconderse, conductos pequeños, distracciones). Moneda: Galeones. Quedan {page.data['stats']['Dias']} días de curso. Acciones descuentan maná, días o galeones. Valores actuales: Vida={page.data['stats']['Vida']}, Dinero={page.data['stats']['Dinero']}, Mana={page.data['stats']['Mana']}, EXP={page.data['stats']['EXP']}, Dias={page.data['stats']['Dias']}. Mochila: '{page.data['inventario']}'. AL FINAL ABSOLUTO de tu mensaje, incluye estrictamente estos bloques en este formato exacto:\n1. [ESTADÍSTICAS: Vida=VALOR, Dinero=VALOR, Mana=VALOR, EXP=VALOR, Dias=VALOR]\n2. [MOCHILA: Objetos escolares actualizados]\n3. [MEMORIA: Breve situación]."
         comp = client.chat.completions.create(model="llama-3.3-70b-versatile", messages=[{"role": "system", "content": p_sys}] + [{"role": "user" if msg.get("rol") == "usuario" else "assistant", "content": msg.get("texto", "")} for msg in page.data["historial"][-6:]])
-        raw = str(comp.choices[0].message.content)
+        raw = str(comp.choices[0].message.content) if hasattr(comp.choices[0], 'message') else str(comp.choices[0]['message']['content'])
         res = raw
 
         if "[MEMORIA:" in raw:
@@ -149,9 +131,27 @@ semillas = [
         inv_lbl.value = f"🎒 Mochila: {page.data['inventario']}"
         page.update()
 
+    def guardar_click(e):
+        if page.data["correo_usuario"]:
+            if escribir_nube(page.data["correo_usuario"], {"stats": page.data["stats"], "historial": page.data["historial"], "inventario": page.data["inventario"], "lore": page.data["lore"]}):
+                btn_sav.content.text = "✅ Notas Guardadas"; btn_sav.bgcolor = "#10B981"
+            else: btn_sav.content.text = "❌ Error Red"; btn_sav.bgcolor = "#EF4444"
+            page.update()
+
+    def reiniciar_click(e):
+        if page.data["correo_usuario"]:
+            try: urllib.request.urlopen(urllib.request.Request(f"{URL_MOCK}/{page.data['correo_usuario'].replace('@','_at_').replace('.','_dot_')}", method="DELETE", headers={'User-Agent': 'Mozilla/5.0'}), timeout=2)
+            except: pass
+        page.data.update({"stats": {"Vida": 100, "Dinero": 15, "Mana": 10, "EXP": 0, "Dias": 270}, "inventario": ["Túnica de Primer Año", "Varita de Fresno", "Mascota Pequeña"], "historial": [], "correo_usuario": None, "lore": [f"Misterio: {random.choice(semillas)}"]})
+        la_bienvenida(); btn_sav.content.text = "💾 Guardar Notas"; btn_sav.bgcolor = "#065F46"
+        reloj_lbl.value = f"📅 CURSO: Quedan {page.data['stats']['Dias']} días para los Exámenes Finales"
+        stats_lbl.value = f"❤️ Vitalidad: {page.data['stats']['Vida']}% | 🪙 {page.data['stats']['Dinero']} Galeones | 🔮 Maná: {page.data['stats']['Mana']}/10"
+        inv_lbl.value = f"🎒 Mochila: {page.data['inventario']}"; input_txt.hint_text = "Introduce tu correo electrónico de matrícula..."
+        page.update()
+
     btn_env.on_click = enviar_accion
-    btn_sav.on_click = lambda e: guardar()
-    btn_res.on_click = lambda e: reiniciar()
+    btn_sav.on_click = guardar_click
+    btn_res.on_click = reiniciar_click
     page.add(ft.Column([ft.Row([ft.Text("🧙‍♂️ ACADEMIA MÁGICA", size=12, weight=ft.FontWeight.BOLD, color="#A78BFA"), ft.Row([btn_sav, btn_res], spacing=5)], alignment=ft.MainAxisAlignment.SPACE_BETWEEN), stat_box, ft.Divider(color="#1E293B"), chat_box, ft.Divider(color="#1E293B"), modo_radio, ft.Row([input_txt, btn_env])], expand=True))
 
 ft.app(target=main)
