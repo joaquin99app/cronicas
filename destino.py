@@ -61,7 +61,8 @@ def escribir_nube_remota(correo: str, datos: dict) -> bool:
             method=method
         )
         with urllib.request.urlopen(req, timeout=10) as response:
-            if response.status in:
+            # CORREGIDO: Sintaxis válida de pertenencia para estados HTTP exitosos
+            if response.status in [200, 201]:
                 return True
     except Exception as e:
         print(f"Error al escribir en la nube: {e}")
@@ -250,7 +251,7 @@ def main(page: ft.Page):
                 max_tokens=1024
             )
             
-            # Sintaxis reglamentaria estricta con índice
+            # Sintaxis reglamentaria estricta de Groq con el índice del mensaje
             raw_res = str(completion.choices[0].message.content)
             procesar_bloques_ia(raw_res)
 
@@ -299,7 +300,10 @@ def main(page: ft.Page):
     page.add(interfaz_juego)
 
 # =====================================================================
-# 5. ARRANQUE DE PRODUCCIÓN COMPATIBLE CON RENDER
+# 5. ARRANQUE DE PRODUCCIÓN ADAPTATIVO PARA PORT DE RENDER
 # =====================================================================
-ft.app(target=main)
-            
+if __name__ == "__main__":
+    # Render inyecta la variable de entorno PORT dinámicamente para enlazar servicios web
+    puerto_render = int(os.environ.get("PORT", 8080))
+    ft.app(target=main, port=puerto_render, view=None)
+    
