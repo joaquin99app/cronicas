@@ -61,7 +61,6 @@ def escribir_nube_remota(correo: str, datos: dict) -> bool:
             method=method
         )
         with urllib.request.urlopen(req, timeout=10) as response:
-            # CORREGIDO: Sintaxis explícita infalible para validación HTTP sin operadores rotos
             if response.status == 200 or response.status == 201:
                 return True
     except Exception as e:
@@ -103,7 +102,7 @@ def main(page: ft.Page):
         "3. [MEMORIA: Evento crucial resumido en una frase]"
     )
 
-    # COMPONENTES VISUALES INTERNOS (Colores en formato String nativo)
+    # COMPONENTES VISUALES INTERNOS (Cadenas estables de color para evitar deprecaciones)
     lbl_vida = ft.Text("❤️ Vida: 100", size=14, weight=ft.FontWeight.BOLD, color="red")
     lbl_dinero = ft.Text("💰 Galeones: 15", size=14, weight=ft.FontWeight.BOLD, color="amber")
     lbl_mana = ft.Text("✨ Maná: 10/10", size=14, weight=ft.FontWeight.BOLD, color="blue")
@@ -248,7 +247,7 @@ def main(page: ft.Page):
                 max_tokens=1024
             )
             
-            # SINTAXIS REGLAMENTARIA CORRECTA ACTUAL EXIGIDA CON ÍNDICE
+            # SINTAXIS REGLAMENTARIA ESTRICTA OBLIGATORIA CON ÍNDICE [0]
             raw_res = str(completion.choices[0].message.content)
             procesar_bloques_ia(raw_res)
 
