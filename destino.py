@@ -61,8 +61,7 @@ def escribir_nube_remota(correo: str, datos: dict) -> bool:
             method=method
         )
         with urllib.request.urlopen(req, timeout=10) as response:
-            # CORREGIDO: Sintaxis válida de pertenencia para estados HTTP exitosos
-            if response.status in [200, 201]:
+            if response.status in:
                 return True
     except Exception as e:
         print(f"Error al escribir en la nube: {e}")
@@ -105,23 +104,23 @@ def main(page: ft.Page):
     )
 
     # -----------------------------------------------------------------
-    # COMPONENTES VISUALES INTERNOS (Inicializados ANTES de vincular eventos)
+    # COMPONENTES VISUALES INTERNOS (CORREGIDO: Colores basados en cadenas)
     # -----------------------------------------------------------------
-    lbl_vida = ft.Text("❤️ Vida: 100", size=14, weight=ft.FontWeight.BOLD, color=ft.colors.RED_400)
-    lbl_dinero = ft.Text("💰 Galeones: 15", size=14, weight=ft.FontWeight.BOLD, color=ft.colors.AMBER_400)
-    lbl_mana = ft.Text("✨ Maná: 10/10", size=14, weight=ft.FontWeight.BOLD, color=ft.colors.BLUE_400)
-    lbl_exp = ft.Text("🎓 EXP: 0%", size=14, weight=ft.FontWeight.BOLD, color=ft.colors.GREEN_400)
-    lbl_dias = ft.Text("⏳ Curso: 270 días", size=14, weight=ft.FontWeight.BOLD, color=ft.colors.PURPLE_400)
+    lbl_vida = ft.Text("❤️ Vida: 100", size=14, weight=ft.FontWeight.BOLD, color="red")
+    lbl_dinero = ft.Text("💰 Galeones: 15", size=14, weight=ft.FontWeight.BOLD, color="amber")
+    lbl_mana = ft.Text("✨ Maná: 10/10", size=14, weight=ft.FontWeight.BOLD, color="blue")
+    lbl_exp = ft.Text("🎓 EXP: 0%", size=14, weight=ft.FontWeight.BOLD, color="green")
+    lbl_dias = ft.Text("⏳ Curso: 270 días", size=14, weight=ft.FontWeight.BOLD, color="purple")
     
     panel_stats = ft.Container(
         content=ft.Row([lbl_vida, lbl_dinero, lbl_mana, lbl_exp, lbl_dias], alignment=ft.MainAxisAlignment.SPACE_EVENLY, wrap=True),
-        padding=10, bgcolor=ft.colors.SURFACE_CONTAINER_HIGHEST, border_radius=10, margin=ft.margin.only(bottom=10)
+        padding=10, bgcolor="surfaceContainerHighest", border_radius=10, margin=ft.margin.only(bottom=10)
     )
 
     lbl_mochila = ft.Text("🎒 Mochila: Túnica de Primer Año, Varita de Fresno, Mascota Pequeña", size=12, italic=True)
     panel_inventario = ft.Container(
-        content=lbl_mochila, padding=10, bgcolor=ft.colors.BACKGROUND, 
-        border=ft.border.all(1, ft.colors.OUTLINE), border_radius=8, margin=ft.margin.only(bottom=15)
+        content=lbl_mochila, padding=10, bgcolor="background", 
+        border=ft.border.all(1, "outline"), border_radius=8, margin=ft.margin.only(bottom=15)
     )
 
     txt_narracion = ft.Text(page.data["historial_lore"], size=16, selectable=True)
@@ -251,7 +250,7 @@ def main(page: ft.Page):
                 max_tokens=1024
             )
             
-            # Sintaxis reglamentaria estricta de Groq con el índice del mensaje
+            # SINTAXIS REGLAMENTARIA EXACTA CON ÍNDICE [0]
             raw_res = str(completion.choices[0].message.content)
             procesar_bloques_ia(raw_res)
 
@@ -274,17 +273,17 @@ def main(page: ft.Page):
     btn_conectar.on_click = al_conectar_click
     btn_enviar.on_click = al_enviar_accion_click
 
-    # Confección del Layout Visual Móvil
+    # Confección del Layout Visual Móvil (CORREGIDO: Atributos de color en string)
     interfaz_juego = ft.Card(
         content=ft.Container(
             content=ft.Column(
                 [
-                    ft.Text("🏰 ACADEMIA DE JÓVENES MAGOS", size=18, weight=ft.FontWeight.BOLD, color=ft.colors.AMBER_600, alignment=ft.alignment.center),
+                    ft.Text("🏰 ACADEMIA DE JÓVENES MAGOS", size=18, weight=ft.FontWeight.BOLD, color="amber", alignment=ft.alignment.center),
                     ft.Divider(),
                     panel_stats,
                     panel_inventario,
-                    ft.Text("NARRACIÓN DEL DIRECTOR:", size=11, weight=ft.FontWeight.W_300, color=ft.colors.ON_SURFACE_VARIANT),
-                    ft.Container(scroll_narracion, border=ft.border.all(1, ft.colors.SURFACE_CONTAINER_HIGHEST), padding=12, border_radius=6, bgcolor=ft.colors.SURFACE_CONTAINER),
+                    ft.Text("NARRACIÓN DEL DIRECTOR:", size=11, weight=ft.FontWeight.W_300, color="onSurfaceVariant"),
+                    ft.Container(scroll_narracion, border=ft.border.all(1, "surfaceContainerHighest"), padding=12, border_radius=6, bgcolor="surfaceContainer"),
                     ft.Row([txt_accion, btn_enviar], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
                     ft.Divider(),
                     ft.Row([txt_correo, btn_conectar])
@@ -303,7 +302,6 @@ def main(page: ft.Page):
 # 5. ARRANQUE DE PRODUCCIÓN ADAPTATIVO PARA PORT DE RENDER
 # =====================================================================
 if __name__ == "__main__":
-    # Render inyecta la variable de entorno PORT dinámicamente para enlazar servicios web
     puerto_render = int(os.environ.get("PORT", 8080))
     ft.app(target=main, port=puerto_render, view=None)
     
