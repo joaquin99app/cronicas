@@ -61,7 +61,8 @@ def escribir_nube_remota(correo: str, datos: dict) -> bool:
             method=method
         )
         with urllib.request.urlopen(req, timeout=10) as response:
-            if response.status in (200, 201):
+            # CORREGIDO: Sintaxis explícita infalible para validación HTTP sin operadores rotos
+            if response.status == 200 or response.status == 201:
                 return True
     except Exception as e:
         print(f"Error al escribir en la nube: {e}")
@@ -102,7 +103,7 @@ def main(page: ft.Page):
         "3. [MEMORIA: Evento crucial resumido en una frase]"
     )
 
-    # COMPONENTES VISUALES INTERNOS
+    # COMPONENTES VISUALES INTERNOS (Colores en formato String nativo)
     lbl_vida = ft.Text("❤️ Vida: 100", size=14, weight=ft.FontWeight.BOLD, color="red")
     lbl_dinero = ft.Text("💰 Galeones: 15", size=14, weight=ft.FontWeight.BOLD, color="amber")
     lbl_mana = ft.Text("✨ Maná: 10/10", size=14, weight=ft.FontWeight.BOLD, color="blue")
@@ -247,7 +248,7 @@ def main(page: ft.Page):
                 max_tokens=1024
             )
             
-            # SINTAXIS REGLAMENTARIA EXACTA CORREGIDA CON ÍNDICE [0]
+            # SINTAXIS REGLAMENTARIA CORRECTA ACTUAL EXIGIDA CON ÍNDICE
             raw_res = str(completion.choices[0].message.content)
             procesar_bloques_ia(raw_res)
 
@@ -296,6 +297,6 @@ def main(page: ft.Page):
     page.add(interfaz_juego)
 
 # =====================================================================
-# 5. ARRANQUE EN NUBE COMO APLICACIÓN ASGI (MÉTODO SEGURO)
+# 5. ASIGNACIÓN DEL SERVIDOR WEB DINÁMICO ASGI (COMPATIBLE CON RENDER)
 # =====================================================================
 app = ft.app(target=main, export_asgi=True)
