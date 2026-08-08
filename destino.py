@@ -61,7 +61,7 @@ def escribir_nube_remota(correo: str, datos: dict) -> bool:
             method=method
         )
         with urllib.request.urlopen(req, timeout=10) as response:
-            if response.status in:
+            if response.status in (200, 201):
                 return True
     except Exception as e:
         print(f"Error al escribir en la nube: {e}")
@@ -72,7 +72,6 @@ def escribir_nube_remota(correo: str, datos: dict) -> bool:
 # 1. & 4. FUNCIÓN PRINCIPAL DE INTERFAZ (FLET)
 # =====================================================================
 def main(page: ft.Page):
-    # Configuración de ventana móvil para simulación/web
     page.title = "Colegio de Magia - Escuela de Aprendices"
     page.theme_mode = ft.ThemeMode.DARK
     page.horizontal_alignment = ft.CrossAxisAlignment.CENTER
@@ -103,9 +102,7 @@ def main(page: ft.Page):
         "3. [MEMORIA: Evento crucial resumido en una frase]"
     )
 
-    # -----------------------------------------------------------------
-    # COMPONENTES VISUALES INTERNOS (CORREGIDO: Colores basados en cadenas)
-    # -----------------------------------------------------------------
+    # COMPONENTES VISUALES INTERNOS
     lbl_vida = ft.Text("❤️ Vida: 100", size=14, weight=ft.FontWeight.BOLD, color="red")
     lbl_dinero = ft.Text("💰 Galeones: 15", size=14, weight=ft.FontWeight.BOLD, color="amber")
     lbl_mana = ft.Text("✨ Maná: 10/10", size=14, weight=ft.FontWeight.BOLD, color="blue")
@@ -250,7 +247,7 @@ def main(page: ft.Page):
                 max_tokens=1024
             )
             
-            # SINTAXIS REGLAMENTARIA EXACTA CON ÍNDICE [0]
+            # SINTAXIS REGLAMENTARIA EXACTA CORREGIDA CON ÍNDICE [0]
             raw_res = str(completion.choices[0].message.content)
             procesar_bloques_ia(raw_res)
 
@@ -273,7 +270,7 @@ def main(page: ft.Page):
     btn_conectar.on_click = al_conectar_click
     btn_enviar.on_click = al_enviar_accion_click
 
-    # Confección del Layout Visual Móvil (CORREGIDO: Atributos de color en string)
+    # Confección del Layout Visual Móvil
     interfaz_juego = ft.Card(
         content=ft.Container(
             content=ft.Column(
@@ -299,9 +296,6 @@ def main(page: ft.Page):
     page.add(interfaz_juego)
 
 # =====================================================================
-# 5. ARRANQUE DE PRODUCCIÓN ADAPTATIVO PARA PORT DE RENDER
+# 5. ARRANQUE EN NUBE COMO APLICACIÓN ASGI (MÉTODO SEGURO)
 # =====================================================================
-if __name__ == "__main__":
-    puerto_render = int(os.environ.get("PORT", 8080))
-    ft.app(target=main, port=puerto_render, view=None)
-    
+app = ft.app(target=main, export_asgi=True)
