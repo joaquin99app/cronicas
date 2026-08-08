@@ -61,6 +61,7 @@ def escribir_nube_remota(correo: str, datos: dict) -> bool:
             method=method
         )
         with urllib.request.urlopen(req, timeout=10) as response:
+            # Comparación tradicional directa para evitar errores de sintaxis
             if response.status == 200 or response.status == 201:
                 return True
     except Exception as e:
@@ -102,7 +103,7 @@ def main(page: ft.Page):
         "3. [MEMORIA: Evento crucial resumido en una frase]"
     )
 
-    # COMPONENTES VISUALES INTERNOS (Cadenas estables de color para evitar deprecaciones)
+    # COMPONENTES VISUALES INTERNOS (Cadenas estables de color en Flet moderno)
     lbl_vida = ft.Text("❤️ Vida: 100", size=14, weight=ft.FontWeight.BOLD, color="red")
     lbl_dinero = ft.Text("💰 Galeones: 15", size=14, weight=ft.FontWeight.BOLD, color="amber")
     lbl_mana = ft.Text("✨ Maná: 10/10", size=14, weight=ft.FontWeight.BOLD, color="blue")
@@ -247,7 +248,7 @@ def main(page: ft.Page):
                 max_tokens=1024
             )
             
-            # SINTAXIS REGLAMENTARIA ESTRICTA OBLIGATORIA CON ÍNDICE [0]
+            # SINTAXIS REGLAMENTARIA REQUERIDA CON ÍNDICE CORREGIDA
             raw_res = str(completion.choices[0].message.content)
             procesar_bloques_ia(raw_res)
 
@@ -296,6 +297,7 @@ def main(page: ft.Page):
     page.add(interfaz_juego)
 
 # =====================================================================
-# 5. ASIGNACIÓN DEL SERVIDOR WEB DINÁMICO ASGI (COMPATIBLE CON RENDER)
+# 5. EXPORTACIÓN ASGI OBLIGATORIA PARA SERVIDORES WEB (RENDER)
 # =====================================================================
 app = ft.app(target=main, export_asgi=True)
+    
