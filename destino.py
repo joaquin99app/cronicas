@@ -1,5 +1,3 @@
-import urllib.request
-import json
 import os
 import flet as ft
 from groq import Groq
@@ -10,67 +8,8 @@ from groq import Groq
 GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "tu_api_key_aqui")
 client = Groq(api_key=GROQ_API_KEY)
 
-# URL base para MockAPI de persistencia infinita
-MOCKAPI_BASE_URL = "https://mockapi.io"
-
 # =====================================================================
-# 3. FUNCIONES DE LA NUBE PERMANENTE (ESTRUCTURA PLANA)
-# =====================================================================
-def limpiar_correo_id(correo: str) -> str:
-    """Limpia el correo de arrobas y puntos para crear un ID compatible."""
-    return correo.replace("@", "_").replace(".", "_").strip().lower()
-
-def leer_nube_remota(correo: str) -> dict:
-    """Lee el progreso del alumno desde la nube remota usando urllib."""
-    user_id = limpiar_correo_id(correo)
-    url = f"{MOCKAPI_BASE_URL}/{user_id}"
-    try:
-        req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
-        with urllib.request.urlopen(req, timeout=10) as response:
-            if response.status == 200:
-                data = json.loads(response.read().decode('utf-8'))
-                return data.get("progreso", None)
-    except Exception:
-        return None
-    return None
-
-def escribir_nube_remota(correo: str, datos: dict) -> bool:
-    """Escribe o actualiza el progreso del alumno en la nube remota."""
-    user_id = limpiar_correo_id(correo)
-    existe = leer_nube_remota(correo)
-    
-    payload = {
-        "id": user_id,
-        "correo_original": correo,
-        "progreso": datos
-    }
-    data_bytes = json.dumps(payload).encode('utf-8')
-    
-    if existe is not None:
-        url = f"{MOCKAPI_BASE_URL}/{user_id}"
-        method = "PUT"
-    else:
-        url = MOCKAPI_BASE_URL
-        method = "POST"
-        
-    try:
-        req = urllib.request.Request(
-            url, 
-            data=data_bytes, 
-            headers={'Content-Type': 'application/json', 'User-Agent': 'Mozilla/5.0'},
-            method=method
-        )
-        with urllib.request.urlopen(req, timeout=10) as response:
-            # Comparación tradicional directa para evitar errores de sintaxis
-            if response.status == 200 or response.status == 201:
-                return True
-    except Exception as e:
-        print(f"Error al escribir en la nube: {e}")
-        return False
-    return False
-
-# =====================================================================
-# 1. & 4. FUNCIÓN PRINCIPAL DE INTERFAZ (FLET)
+# 1. & 4. FUNCIÓN PRINCIPAL DE INTERFAZ (ESTRUCTURA PLANA)
 # =====================================================================
 def main(page: ft.Page):
     page.title = "Colegio de Magia - Escuela de Aprendices"
@@ -78,9 +17,9 @@ def main(page: ft.Page):
     page.horizontal_alignment = ft.CrossAxisAlignment.CENTER
     page.scroll = ft.ScrollMode.ADAPTIVE
 
-    # Inicialización de Datos por Defecto en page.data
+    # Inicialización de Datos locales en memoria del navegador
     page.data = {
-        "correo": "",
+        "usuario_activo": False,
         "vida": 100,
         "dinero": 15,
         "mana_actual": 10,
@@ -103,7 +42,7 @@ def main(page: ft.Page):
         "3. [MEMORIA: Evento crucial resumido en una frase]"
     )
 
-    # COMPONENTES VISUALES INTERNOS (Cadenas estables de color en Flet moderno)
+    # COMPONENTES VISUALES INTERNOS (Colores basados en Strings nativos)
     lbl_vida = ft.Text("❤️ Vida: 100", size=14, weight=ft.FontWeight.BOLD, color="red")
     lbl_dinero = ft.Text("💰 Galeones: 15", size=14, weight=ft.FontWeight.BOLD, color="amber")
     lbl_mana = ft.Text("✨ Maná: 10/10", size=14, weight=ft.FontWeight.BOLD, color="blue")
@@ -131,7 +70,7 @@ def main(page: ft.Page):
     )
     btn_enviar = ft.Button("Acción", icon=ft.icons.SEND, disabled=True)
 
-    txt_correo = ft.TextField(label="Introduce tu Correo para Cargar/Registrar", expand=True, hint_text="ejemplo@magia.com")
+    txt_correo = ft.TextField(label="Introduce un Nombre o Correo para Iniciar", expand=True, hint_text="ejemplo@magia.com")
     btn_conectar = ft.ElevatedButton("Entrar al Colegio")
         # -----------------------------------------------------------------
     # FUNCIONES DE LÓGICA DE INTERFAZ Y PROCESAMIENTO
@@ -186,12 +125,12 @@ def main(page: ft.Page):
             print(f"Error recortando bloques de la IA: {e}")
 
     # -----------------------------------------------------------------
-    # MANEJADORES DE EVENTOS
+    # MANEJADORES DE EVENTOS LOCALES
     # -----------------------------------------------------------------
     def al_conectar_click(e):
         correo = txt_correo.value.strip()
-        if not correo or "@" not in correo:
-            txt_correo.error_text = "Por favor, introduce un correo electrónico válido"
+        if not correo:
+            txt_correo.error_text = "Por favor, introduce una identificación"
             page.update()
             return
         
@@ -200,20 +139,9 @@ def main(page: ft.Page):
         txt_correo.disabled = True
         page.update()
 
-        progreso_guardado = leer_nube_remota(correo)
-        page.data["correo"] = correo
-
-        if progreso_guardado:
-            page.data.update(progreso_guardado)
-            txt_narracion.value = f"¡Bienvenido de vuelta, alumno! Reanudando tu partida en el Colegio...\n\n{page.data['historial_lore']}"
-        else:
-            escribir_nube_remota(correo, {
-                "vida": page.data["vida"], "dinero": page.data["dinero"],
-                "mana_actual": page.data["mana_actual"], "mana_max": page.data["mana_max"],
-                "exp": page.data["exp"], "dias": page.data["dias"],
-                "mochila": page.data["mochila"], "historial_lore": page.data["historial_lore"]
-            })
-            txt_narracion.value = f"¡Expediente de inscripción mágico creado con éxito!\n\n{page.data['historial_lore']}"
+        # Inicio de sesión en la memoria volátil del navegador actual
+        page.data["usuario_activo"] = True
+        txt_narracion.value = f"¡Matrícula escolar aceptada!\n\n{page.data['historial_lore']}"
 
         txt_accion.disabled = False
         btn_enviar.disabled = False
@@ -230,7 +158,7 @@ def main(page: ft.Page):
         page.update()
 
         contexto_rol = (
-            f"El alumno (Correo ID: {page.data['correo']}) intenta realizar la acción: '{accion_usuario}'. "
+            f"El alumno intenta realizar la acción: '{accion_usuario}'. "
             f"Estado actual: Vida={page.data['vida']}, Dinero={page.data['dinero']} Galeones, "
             f"Maná={page.data['mana_actual']}/{page.data['mana_max']}, EXP={page.data['exp']}%, Días de curso restantes={page.data['dias']}. "
             f"Lleva en su mochila: {', '.join(page.data['mochila'])}. "
@@ -238,6 +166,7 @@ def main(page: ft.Page):
         )
 
         try:
+            # 2. LLAMADA REGLAMENTARIA CORRECTA CON ÍNDICE [0]
             completion = client.chat.completions.create(
                 model="llama-3.3-70b-versatile",
                 messages=[
@@ -248,16 +177,8 @@ def main(page: ft.Page):
                 max_tokens=1024
             )
             
-            # SINTAXIS REGLAMENTARIA REQUERIDA CON ÍNDICE CORREGIDA
             raw_res = str(completion.choices[0].message.content)
             procesar_bloques_ia(raw_res)
-
-            escribir_nube_remota(page.data["correo"], {
-                "vida": page.data["vida"], "dinero": page.data["dinero"],
-                "mana_actual": page.data["mana_actual"], "mana_max": page.data["mana_max"],
-                "exp": page.data["exp"], "dias": page.data["dias"],
-                "mochila": page.data["mochila"], "historial_lore": page.data["historial_lore"]
-            })
 
         except Exception as err:
             page.data["historial_lore"] = f"Hubo un problema de conexión con las corrientes de maná del servidor (Error de API). Inténtalo de nuevo.\nDetalle: {err}"
@@ -297,7 +218,8 @@ def main(page: ft.Page):
     page.add(interfaz_juego)
 
 # =====================================================================
-# 5. EXPORTACIÓN ASGI OBLIGATORIA PARA SERVIDORES WEB (RENDER)
+# 5. ASIGNACIÓN CORREGIDA DE COMPILACIÓN ASGI PARA RENDER
 # =====================================================================
-app = ft.app(target=main, export_asgi=True)
+# Cambiado 'export_asgi' por el parámetro reglamentario de tu entorno: 'export_asgi_app'
+app = ft.app(target=main, export_asgi_app=True)
     
