@@ -1,234 +1,156 @@
 import flet as ft
 from groq import Groq
-import os
-import random
+import os, random, urllib.request, json
 from datetime import datetime
-import json
-import urllib.request
 
-URL_NUBE_MOCK = "https://mockapi.io"
+URL_MOCK = "https://mockapi.io"
 
-def leer_nube_remota(correo):
+def leer_nube(correo):
     try:
-        id_limpio = correo.replace("@", "_at_").replace(".", "_dot_")
-        url = f"{URL_NUBE_MOCK}/{id_limpio}"
+        url = f"{URL_MOCK}/{correo.replace('@','_at_').replace('.','_dot_')}"
         req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
-        with urllib.request.urlopen(req, timeout=5) as response:
-            data = json.loads(response.read().decode('utf-8'))
-            return {
-                "stats": json.loads(data["stats"]),
-                "historial": json.loads(data["historial"]),
-                "inventario": json.loads(data["inventario"]),
-                "lore": json.loads(data["lore_partida"])
-            }
+        with urllib.request.urlopen(req, timeout=4) as r:
+            d = json.loads(r.read().decode('utf-8'))
+            return {"stats": json.loads(d["stats"]), "historial": json.loads(d["historial"]), "inventario": json.loads(d["inventario"]), "lore": json.loads(d["lore_partida"])}
     except: return None
 
-def escribir_nube_remota(correo, datos):
+def escribir_nube(correo, datos):
     try:
-        id_limpio = correo.replace("@", "_at_").replace(".", "_dot_")
+        id_l = correo.replace("@", "_at_").replace(".", "_dot_")
         existe = True
         try:
-            req_check = urllib.request.Request(f"{URL_NUBE_MOCK}/{id_limpio}", headers={'User-Agent': 'Mozilla/5.0'})
-            with urllib.request.urlopen(req_check, timeout=3) as r: pass
+            with urllib.request.urlopen(urllib.request.Request(f"{URL_MOCK}/{id_l}", headers={'User-Agent': 'Mozilla/5.0'}), timeout=2) as r: pass
         except: existe = False
-        
-        payload = json.dumps({
-            "id": id_limpio,
-            "stats": json.dumps(datos["stats"]),
-            "historial": json.dumps(datos["historial"]),
-            "inventario": json.dumps(datos["inventario"]),
-            "lore_partida": json.dumps(datos["lore"])
-        }).encode('utf-8')
-        
-        metodo = "PUT" if existe else "POST"
-        url_final = f"{URL_NUBE_MOCK}/{id_limpio}" if existe else URL_NUBE_MOCK
-        req = urllib.request.Request(url_final, data=payload, headers={'Content-Type': 'application/json', 'User-Agent': 'Mozilla/5.0'}, method=metodo)
-        with urllib.request.urlopen(req, timeout=5) as response: pass
+        payload = json.dumps({"id": id_l, "stats": json.dumps(datos["stats"]), "historial": json.dumps(datos["historial"]), "inventario": json.dumps(datos["inventario"]), "lore_partida": json.dumps(datos["lore"])}).encode('utf-8')
+        req = urllib.request.Request(f"{URL_MOCK}/{id_l}" if existe else URL_MOCK, data=payload, headers={'Content-Type': 'application/json', 'User-Agent': 'Mozilla/5.0'}, method="PUT" if existe else "POST")
+        with urllib.request.urlopen(req, timeout=4) as r: pass
         return True
     except: return False
 
-def borrar_nube_remota(correo):
-    try:
-        id_limpio = correo.replace("@", "_at_").replace(".", "_dot_")
-        url = f"{URL_NUBE_MOCK}/{id_limpio}"
-        req = urllib.request.Request(url, method="DELETE", headers={'User-Agent': 'Mozilla/5.0'})
-        with urllib.request.urlopen(req, timeout=3) as r: pass
-    except: pass
-        def cargar_bloque(rol, modo, texto):
-    if rol == "usuario":
-        bg = "#0F172A" if modo == "Pensar" else "#022C22"
-        lbl = "💭 Pensasíntesis: " if modo == "Pensar" else "🗣️ Voz Alta: "
-        return ft.Container(content=ft.Text(f"{lbl}{texto}", color="#94A3B8" if modo == "Pensar" else "#34D399", italic=(modo=="Pensar")), padding=14, border_radius=10, bgcolor=bg)
-    return ft.Container(content=ft.Text(f"🔮 Narrador: {texto}", color="#F3F4F6", font_family="Georgia"), padding=14, border_radius=10, bgcolor="#111827")
+def cargar_bloque(rol, modo, texto):
+    bg = "#0F172A" if modo == "Pensar" else "#1E1B4B" if rol == "usuario" else "#111827"
+    lbl = "💭 Travesura: " if modo == "Pensar" else "🗣️ Hablar: " if rol == "usuario" else "🏰 Director: "
+    return ft.Container(content=ft.Text(f"{lbl}{texto}", color="#94A3B8" if modo == "Pensar" else "#A78BFA" if rol == "usuario" else "#F3F4F6", italic=(modo=="Pensar")), padding=12, border_radius=10, bgcolor=bg)
 
-semillas_amenaza_final = [
-    "El motor de transmutación del Ministerio de Magia ha sido infectado por una maldición de óxido eterno.",
-    "Una secta de licántropos está preparando el despertar de un dragón mitológico bajo la ciudad.",
-    "Un brote de 'estática mística' se está filtrando, borrando los recuerdos de los hechiceros.",
-    "El Reloj de Arena Ancestral que mantiene la barrera de invisibilidad ha sido saboteado.",
-    "Un antiguo linaje de vampiros puros busca desatar una plaga mística purificadora."
-]
-
-def main(page: ft.Page):
-    page.title = "🚨 Crónicas del Velo Mágico"
-    page.bgcolor = "#05070B"
-    page.theme_mode = ft.ThemeMode.DARK
+semillas = [
+    "La criatura del pozo del ala norte despierta si no se respetan las patrullas nocturnas.",
+    "El Gran Reloj Astronómico se ha retrasado, congelando estancias llenas de trampas rúnicas.",
+    "Alguien está contrabandeando duendecillos de Cornualles en los dormitorios de primer año.",
+    "Los cuadros de la tercera planta han huido de sus lienzos ocultando el pase a los sótanos."
+]def main(page: ft.Page):
+    page.title = "🏰 Academia Mágica"
+    page.bgcolor = "#030712"
     page.scroll = ft.ScrollMode.AUTO
-    page.padding = 20
+    page.padding = 15
 
     client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
+    page.data = {"stats": {"Vida": 100, "Dinero": 15, "Mana": 10, "EXP": 0, "Dias": 270}, "inventario": ["Túnica de Primer Año", "Varita de Fresno", "Mascota Pequeña"], "historial": [], "lore": [f"Misterio: {random.choice(semillas)}"], "correo_usuario": None}
+
+    reloj_lbl = ft.Text(f"📅 CURSO: Quedan {page.data['stats']['Dias']} días para los Exámenes Finales", color="#A78BFA", weight=ft.FontWeight.BOLD, size=13)
+    stats_lbl = ft.Text(f"❤️ Vitalidad: {page.data['stats']['Vida']}% | 🪙 {page.data['stats']['Dinero']} Galeones | 🔮 Maná: {page.data['stats']['Mana']}/10", color="#F3F4F6", size=12, weight=ft.FontWeight.BOLD)
+    inv_lbl = ft.Text(f"🎒 Mochila: {page.data['inventario']}", color="#94A3B8", size=11, italic=True)
     
-    page.data = {
-        "stats": {"Vida": 100, "Dinero": 50, "Mana": 30, "EXP": 0, "Dias": 30},
-        "inventario": ["Varita de Sauce", "Toga Escolar"],
-        "historial": [],
-        "lore": [f"Amenaza de extinción oculta elegida: {random.choice(semillas_amenaza_final)}"],
-        "correo_usuario": None
-    }
+    stat_box = ft.Container(content=ft.Column([reloj_lbl, stats_lbl, inv_lbl], spacing=4), padding=12, border_radius=12, bgcolor="#111827")
+    chat_box = ft.ListView(expand=True, spacing=10, height=340)
 
-    reloj_label = ft.Text(f"⏳ RELOJ DE LA CRISIS: Quedan {page.data['stats']['Dias']} días para el fin del Velo", color="#A78BFA", weight=ft.FontWeight.BOLD, size=14)
-    hora_label = ft.Text(f"⏰ Tiempo Real: {datetime.now().strftime('%H:%M')} | ☀️ BAJO EL VELO", color="#38BDF8", size=12, weight=ft.FontWeight.W_500)
-    stats_text = ft.Text(f"❤️ {page.data['stats']['Vida']}%  |  💰 {page.data['stats']['Dinero']}€  |  🔮 {page.data['stats']['Mana']}/30  |  ✨ {page.data['stats']['EXP']}%", color="#F3F4F6", weight=ft.FontWeight.BOLD, size=15)
-    inventario_text = ft.Text(f"🎒 Mochila: {page.data['inventario']}", color="#94A3B8", size=12, italic=True)
-    
-    stat_container = ft.Container(
-        content=ft.Column([reloj_label, hora_label, stats_text, ft.Divider(color="#1E293B", height=5), inventario_text], alignment=ft.MainAxisAlignment.CENTER, horizontal_alignment=ft.CrossAxisAlignment.CENTER), 
-        padding=15, border_radius=12, gradient=ft.LinearGradient(colors=["#0F172A", "#1E1B4B"])
-    )
-    chat_container = ft.ListView(expand=True, spacing=10, height=360)
-
-    def pintar_bienvenida():
-        chat_container.controls.clear()
-        chat_container.controls.append(cargar_bloque("ia", "Pensar", "Detrás del ruidoso tráfico humano y los carteles de neón de la ciudad moderna, late un mundo oculto regido por la magia antigua, los estatutos del Velo Secreto y los decretos del Ministerio de Hechicería.\n\n📧 [SISTEMA DE GRIMORIO AUTOMÁTICO EN LA NUBE]:\nEscribe tu dirección de correo electrónico abajo en la barra de texto y dale a enviar para iniciar tu andadura o recuperar tu progreso guardado en el servidor:"))
-    pintar_bienvenida()
-
-    modo_radio = ft.RadioGroup(content=ft.Row([ft.Radio(value="Pensar", label="Narrar/Pensar"), ft.Radio(value="Hablar", label="Hablar")], alignment=ft.MainAxisAlignment.CENTER))
+    modo_radio = ft.RadioGroup(content=ft.Row([ft.Radio(value="Pensar", label="Ingeniar Travesura"), ft.Radio(value="Hablar", label="Hablar")], alignment=ft.MainAxisAlignment.CENTER))
     modo_radio.value = "Pensar"
-    input_texto = ft.TextField(hint_text="Introduce tu correo electrónico para empezar...", bgcolor="#111827", border_color="#1E293B", expand=True)
-            def enviar_accion(e):
-        if not input_texto.value: return
-        txt = input_texto.value.strip()
-        input_texto.value = ""
+    input_txt = ft.TextField(hint_text="Introduce tu correo electrónico de matrícula...", bgcolor="#111827", expand=True)
+
+    btn_env = ft.ElevatedButton(content=ft.Text("🪄 CONJURAR", color="white"), bgcolor="#4C1D95", height=45)
+    btn_sav = ft.ElevatedButton(content=ft.Text("💾 Guardar Notas", color="white"), bgcolor="#065F46")
+    btn_res = ft.TextButton(content=ft.Text("💀 Expulsión", color="#EF4444"), on_click=lambda e: reiniciar())
+
+    def la_bienvenida():
+        chat_box.controls.clear()
+        chat_box.controls.append(cargar_bloque("ia", "Pensar", "Frente a ti se alzan los muros del Colegio de Magia. Eres un niño pequeño dando tus primeros pasos. El uniforme te queda grande, el maná es limitado y hay zonas prohibidas vigiladas por gárgolas y prefectos severos donde requieres INGENIO PURO para colarte.\n\n📧 [MATRÍCULA]: Escribe tu correo abajo para cargar o iniciar curso:"))
+    la_bienvenida()
+
+    def enviar_accion(e):
+        if not input_txt.value: return
+        t = input_txt.value.strip()
+        input_txt.value = ""
         
         if page.data["correo_usuario"] is None:
-            if "@" in txt and "." in txt:
-                page.data["correo_usuario"] = txt
-                partida_cargada = leer_nube_remota(txt)
-                if partida_cargada:
-                    page.data["stats"] = partida_cargada["stats"]
-                    page.data["historial"] = partida_cargada["historial"]
-                    page.data["inventario"] = partida_cargada["inventario"]
-                    page.data["lore"] = partida_cargada["lore"]
-                    chat_container.controls.clear()
-                    for msg in page.data["historial"]: 
-                        chat_container.controls.append(cargar_bloque(msg.get("rol", "ia"), msg.get("modo", "Pensar"), msg.get("texto", "")))
-                    chat_container.controls.append(cargar_bloque("ia", "Pensar", f"🔮 Vínculo establecido con {txt}. Tu progreso e historial se han sincronizado con éxito. Continúa tu aventura."))
+            if "@" in t and "." in t:
+                page.data["correo_usuario"] = t
+                p = leer_nube(t)
+                if p:
+                    page.data.update(p)
+                    chat_box.controls.clear()
+                    for m in page.data["historial"]: chat_box.controls.append(cargar_bloque(m.get("rol","ia"), m.get("modo","Pensar"), m.get("texto","")))
+                    chat_box.controls.append(cargar_bloque("ia", "Pensar", f"🔮 Matrícula recuperada para {t}. Regresas a los pasillos del castillo."))
                 else:
-                    chat_container.controls.append(cargar_bloque("ia", "Pensar", f"✨ Correo [{txt}] registrado en la nube permanente por primera vez.\n\nTienes {page.data['stats']['Dinero']}€ mágicos en tu monedero de cuero. Los callejones invisibles albergan mercados negros y boticarios oscuros. Todo tiene un precio.\n\nElige tu arquetipo místico escribiéndolo abajo para adentrarte en el mapa abierto: Mago Urbano, Detective, Cazador o Humano Despierto."))
-                reloj_label.value = f"⏳ RELOJ DE LA CRISIS: Quedan {page.data['stats']['Dias']} días para el fin del Velo"
-                stats_text.value = f"❤️ {page.data['stats']['Vida']}%  |  💰 {page.data['stats']['Dinero']}€  |  🔮 {page.data['stats']['Mana']}/30  |  ✨ {page.data['stats']['EXP']}%"
-                inventario_text.value = f"🎒 Mochila: {page.data['inventario']}"
-                input_texto.hint_text = "¿Qué dirección toma tu voluntad?"
-                btn_save.content.text = f"💾 Guardar: {txt[:4]}..."
+                    chat_box.controls.append(cargar_bloque("ia", "Pensar", f"✨ Registro completo para [{t}]. Tienes {page.data['stats']['Dinero']} galeones. El Sombrero Seleccionador espera abajo. Escribe tu primera acción como niño místico (ej. ¿Qué traes en tu baúl escolar?)."))
+                reloj_lbl.value = f"📅 CURSO: Quedan {page.data['stats']['Dias']} días para los Exámenes Finales"
+                stats_lbl.value = f"❤️ Vitalidad: {page.data['stats']['Vida']}% | 🪙 {page.data['stats']['Dinero']} Galeones | 🔮 Maná: {page.data['stats']['Mana']}/10"
+                inv_lbl.value = f"🎒 Mochila: {page.data['inventario']}"
+                input_txt.hint_text = "¿Qué travesura o conjuro intentas?"
+                btn_sav.content.text = f"💾 Guardar: {t[:4]}..."
                 page.update()
                 return
             else:
-                chat_container.controls.append(cargar_bloque("ia", "Pensar", "❌ Introduce un correo válido (ejemplo: mago@gmail.com):"))
+                chat_box.controls.append(cargar_bloque("ia", "Pensar", "❌ Escribe un correo válido:"))
                 page.update()
                 return
 
-        mod = modo_radio.value
-        chat_container.controls.append(cargar_bloque("usuario", mod, txt))
-        page.data["historial"].append({"rol": "usuario", "modo": mod, "texto": txt})
+        m = modo_radio.value
+        chat_box.controls.append(cargar_bloque("usuario", m, t))
+        page.data["historial"].append({"rol": "usuario", "modo": m, "texto": t})
         page.update()
 
-        prompt_sistema = f"Actúa como el Game Master de un RPG conversacional de Fantasía Urbana. Estilo denso y descriptivo.\n[SISTEMA ECONÓMICO REAL EN EUROS]\n- Despliega tiendas mágicas. Si compra, descuenta dinero y añádelo a su mochila.\n[REGLA DE VALORES FIJOS]\nEstadísticas actuales antes de tu turno: Vida={page.data['stats']['Vida']}, Dinero={page.data['stats']['Dinero']}, Mana={page.data['stats']['Mana']}, EXP={page.data['stats']['EXP']}, Dias={page.data['stats']['Dias']}.\nMochila actual: '{page.data['inventario']}'.\nAL FINAL ABSOLUTO, incluye estrictamente estos bloques:\n1. [ESTADÍSTICAS: Vida=VALOR, Dinero=VALOR, Mana=VALOR, EXP=VALOR, Dias=VALOR]\n2. [MOCHILA: Lista completa de objetos]\n3. [MEMORIA: Resumen corto de la trama]."
-        
-        completion = client.chat.completions.create(
-            model="llama-3.3-70b-versatile", 
-            messages=[{"role": "system", "content": prompt_sistema}] + [{"role": "user" if m.get("rol") == "usuario" else "assistant", "content": m.get("texto", "")} for m in page.data["historial"][-6:]]
-        )
-        raw_res = str(completion.choices[0].message.content)
-        res_narrador = raw_res
+        p_sys = f"Actúa como Game Master de un RPG en un Colegio de Magia escolar. El jugador es un NIÑO PEQUEÑO de primer año: bajo, físicamente débil y con maná máximo limitado (10). Las zonas prohibidas (Sección Restringida, Mazmorras Nocturnas) requieren INGENIO PURO (esconderse, conductos pequeños, distracciones). Moneda: Galeones. Quedan {page.data['stats']['Dias']} días de curso. Acciones descuentan maná, días o galeones. Valores actuales: Vida={page.data['stats']['Vida']}, Dinero={page.data['stats']['Dinero']}, Mana={page.data['stats']['Mana']}, EXP={page.data['stats']['EXP']}, Dias={page.data['stats']['Dias']}. Mochila: '{page.data['inventario']}'. AL FINAL ABSOLUTO de tu mensaje, incluye estrictamente estos bloques en este formato exacto:\n1. [ESTADÍSTICAS: Vida=VALOR, Dinero=VALOR, Mana=VALOR, EXP=VALOR, Dias=VALOR]\n2. [MOCHILA: Objetos escolares actualizados]\n3. [MEMORIA: Breve situación]."
+        comp = client.chat.completions.create(model="llama-3.3-70b-versatile", messages=[{"role": "system", "content": p_sys}] + [{"role": "user" if msg.get("rol") == "usuario" else "assistant", "content": msg.get("texto", "")} for msg in page.data["historial"][-6:]])
+        raw = str(comp.choices[0].message.content)
+        res = raw
 
-        if "[MEMORIA:" in raw_res:
+        if "[MEMORIA:" in raw:
+            try: page.data["lore"] = [raw[raw.index("[MEMORIA:") + 9:raw.index("]", raw.index("[MEMORIA:"))].replace('"','').strip()]; res = raw[:raw.index("[MEMORIA:")].strip()
+            except: pass
+        if "[MOCHILA:" in raw:
+            try: page.data["inventario"] = [raw[raw.index("[MOCHILA:") + 9:raw.index("]", raw.index("[MOCHILA:"))].strip()]; res = raw[:raw.index("[MOCHILA:")].strip()
+            except: pass
+        if "[ESTADÍSTICAS:" in raw:
             try:
-                idx_ini = raw_res.index("[MEMORIA:")
-                idx_fin = raw_res.index("]", idx_ini)
-                page.data["lore"] = [raw_res[idx_ini + 9:idx_fin].replace('"', '').strip()]
-                res_narrador = raw_res[:idx_ini].strip()
+                sub = raw[raw.index("[ESTADÍSTICAS:") + 14:raw.index("]", raw.index("[ESTADÍSTICAS:"))].strip()
+                res = raw[:raw.index("[ESTADÍSTICAS:")].strip()
+                for c in sub.split(","):
+                    k, v = c.split("=")
+                    k = k.strip(); v = int(v.strip())
+                    if k in page.data["stats"]:
+                        if k == "Vida" and v > 100: v = 100
+                        if k == "Mana" and v > 10: v = 10
+                        page.data["stats"][k] = v
             except: pass
 
-        if "[MOCHILA:" in raw_res:
-            try:
-                idx_ini = raw_res.index("[MOCHILA:")
-                idx_fin = raw_res.index("]", idx_ini)
-                page.data["inventario"] = [raw_res[idx_ini + 9:idx_fin].strip()]
-                if idx_ini < len(res_narrador): res_narrador = raw_res[:idx_ini].strip()
-            except: pass
-
-        if "[ESTADÍSTICAS:" in raw_res:
-            try:
-                idx_ini = raw_res.index("[ESTADÍSTICAS:")
-                idx_fin = raw_res.index("]", idx_ini)
-                cambios_str = raw_res[idx_ini + 14:idx_fin].strip()
-                if idx_ini < len(res_narrador): res_narrador = raw_res[:idx_ini].strip()
-                for cambio in cambios_str.split(","):
-                    try:
-                        clave, valor = cambio.split("=")
-                        k = cambio.strip()
-                        v = int(valor.strip())
-                        if k in page.data["stats"]:
-                            if k == "Vida" and v > 100: v = 100
-                            if k == "Mana" and v > 30: v = 30
-                            page.data["stats"][k] = v
-                    except: pass
-            except: pass
-
-        chat_container.controls.append(cargar_bloque("ia", "Pensar", res_narrador.strip()))
-        page.data["historial"].append({"rol": "ia", "texto": res_narrador.strip()})
-        reloj_label.value = f"⏳ RELOJ DE LA CRISIS: Quedan {page.data['stats']['Dias']} días para el fin del Velo"
-        hora_label.value = f"⏰ Tiempo Real: {datetime.now().strftime('%H:%M')} | ☀️ BAJO EL VELO"
-        stats_text.value = f"❤️ {page.data['stats']['Vida']}%  |  💰 {page.data['stats']['Dinero']}€  |  🔮 {page.data['stats']['Mana']}/30  |  ✨ {page.data['stats']['EXP']}%"
-        inventario_text.value = f"🎒 Mochila: {page.data['inventario']}"
+        chat_box.controls.append(cargar_bloque("ia", "Pensar", res.strip()))
+        page.data["historial"].append({"rol": "ia", "texto": res.strip()})
+        reloj_lbl.value = f"📅 CURSO: Quedan {page.data['stats']['Dias']} días para los Exámenes Finales"
+        stats_lbl.value = f"❤️ Vitalidad: {page.data['stats']['Vida']}% | 🪙 {page.data['stats']['Dinero']} Galeones | 🔮 Maná: {page.data['stats']['Mana']}/10"
+        inv_lbl.value = f"🎒 Mochila: {page.data['inventario']}"
         page.update()
 
-    def abrir_menu_guardar(e):
-        if page.data["correo_usuario"] is not None:
-            datos = {"stats": page.data["stats"], "historial": page.data["historial"], "inventario": page.data["inventario"], "lore": page.data["lore"]}
-            exito = escribir_nube_remota(page.data["correo_usuario"], datos)
-            if exito:
-                btn_save.content.text = "✅ Guardado Permanente"
-                btn_save.bgcolor = "#10B981"
-            else:
-                btn_save.content.text = "❌ Error de Red"
-                btn_save.bgcolor = "#EF4444"
-            page.update()
-        else:
-            chat_container.controls.append(cargar_bloque("ia", "Pensar", "❌ Primero introduce tu correo electrónico abajo."))
+    def guardar():
+        if page.data["correo_usuario"]:
+            if escribir_nube(page.data["correo_usuario"], {"stats": page.data["stats"], "historial": page.data["historial"], "inventario": page.data["inventario"], "lore": page.data["lore"]}):
+                btn_sav.content.text = "✅ Notas Guardadas"; btn_sav.bgcolor = "#10B981"
+            else: btn_sav.content.text = "❌ Error Red"; btn_sav.bgcolor = "#EF4444"
             page.update()
 
-    def reiniciar(e):
-        if page.data["correo_usuario"] is not None: borrar_nube_remota(page.data["correo_usuario"])
-        page.data["stats"] = {"Vida": 100, "Dinero": 50, "Mana": 30, "EXP": 0, "Dias": 30}
-        page.data["inventario"] = ["Varita de Sauce", "Toga Escolar"]
-        page.data["historial"] = []
-        page.data["correo_usuario"] = None
-        input_texto.hint_text = "Introduce tu correo electrónico para empezar..."
-        page.data["lore"] = [f"Amenaza de extinción oculta elegida: {random.choice(semillas_amenaza_final)}"]
-        pintar_bienvenida()
-        btn_save.content.text = "💾 Guardar Grimorio"
-        btn_save.bgcolor = "#059669"
-        reloj_label.value = f"⏳ RELOJ DE LA CRISIS: Quedan {page.data['stats']['Dias']} días para el fin del Velo"
-        stats_text.value = f"❤️ {page.data['stats']['Vida']}%  |  💰 {page.data['stats']['Dinero']}€  |  🔮 {page.data['stats']['Mana']}/30  |  ✨ {page.data['stats']['EXP']}%"
-        inventario_text.value = f"🎒 Mochila: {page.data['inventario']}"
+    def reiniciar():
+        if page.data["correo_usuario"]:
+            try: urllib.request.urlopen(urllib.request.Request(f"{URL_MOCK}/{page.data['correo_usuario'].replace('@','_at_').replace('.','_dot_')}", method="DELETE", headers={'User-Agent': 'Mozilla/5.0'}), timeout=2)
+            except: pass
+        page.data.update({"stats": {"Vida": 100, "Dinero": 15, "Mana": 10, "EXP": 0, "Dias": 270}, "inventario": ["Túnica de Primer Año", "Varita de Fresno", "Mascota Pequeña"], "historial": [], "correo_usuario": None, "lore": [f"Misterio: {random.choice(semillas)}"]})
+        la_bienvenida(); btn_sav.content.text = "💾 Guardar Notas"; btn_sav.bgcolor = "#065F46"
+        reloj_lbl.value = f"📅 CURSO: Quedan {page.data['stats']['Dias']} días para los Exámenes Finales"
+        stats_lbl.value = f"❤️ Vitalidad: {page.data['stats']['Vida']}% | 🪙 {page.data['stats']['Dinero']} Galeones | 🔮 Maná: {page.data['stats']['Mana']}/10"
+        inv_lbl.value = f"🎒 Mochila: {page.data['inventario']}"; input_txt.hint_text = "Introduce tu correo electrónico de matrícula..."
         page.update()
 
-    btn_enviar.on_click = enviar_accion
-    btn_save.on_click = abrir_menu_guardar
-    btn_reset.on_click = reiniciar
-
-    page.add(ft.Column([ft.Row([ft.Text("🧙‍♂️ CRÓNICAS DEL VELO", size=14, weight=ft.FontWeight.BOLD, color="#9333EA"), ft.Row([btn_save, btn_reset], spacing=5)], alignment=ft.MainAxisAlignment.SPACE_BETWEEN), stat_container, ft.Divider(color="#1E293B"), chat_container, ft.Divider(color="#1E293B"), modo_radio, ft.Row([input_texto, btn_enviar])], expand=True))
+    btn_env.on_click = enviar_accion
+    btn_sav.on_click = lambda e: guardar()
+    page.add(ft.Column([ft.Row([ft.Text("🧙‍♂️ ACADEMIA MÁGICA", size=12, weight=ft.FontWeight.BOLD, color="#A78BFA"), ft.Row([btn_sav, btn_res], spacing=5)], alignment=ft.MainAxisAlignment.SPACE_BETWEEN), stat_box, ft.Divider(color="#1E293B"), chat_box, ft.Divider(color="#1E293B"), modo_radio, ft.Row([input_txt, btn_env])], expand=True))
 
 ft.app(target=main)
-                
+    
